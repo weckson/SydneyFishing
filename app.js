@@ -1,0 +1,545 @@
+// Sydney Fishing App — main logic
+// - Leaflet map of Sydney
+// - Geolocation to find nearest best spots
+// - Open-Meteo free weather + marine API (no key) for scoring
+// - Score = baseScore * distanceFactor * conditionFactor * timeFactor
+
+const SYDNEY_CENTER = [-33.8688, 151.2093];
+const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
+
+let map, userMarker, userLatLng = null;
+let spotMarkers = [];
+let currentWeather = null;
+let sortedSpots = [];
+
+function degToCompass(deg) {
+  if (deg == null) return "-";
+  return COMPASS[Math.round(deg / 22.5) % 16];
+}
+
+function haversineKm(a, b) {
+  const R = 6371;
+  const toRad = d => (d * Math.PI) / 180;
+  const dLat = toRad(b[0] - a[0]);
+  const dLng = toRad(b[1] - a[1]);
+  const lat1 = toRad(a[0]);
+  const lat2 = toRad(b[0]);
+  const x = Math.sin(dLat/2)**2 + Math.sin(dLng/2)**2 * Math.cos(lat1) * Math.cos(lat2);
+  return 2 * R * Math.asin(Math.sqrt(x));
+}
+
+function initMap() {
+  map = L.map("map", { zoomControl: true }).setView(SYDNEY_CENTER, 11);
+  // CartoDB Voyager — free, no API key, no referer requirement, clean look
+  L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
+    maxZoom: 20,
+    subdomains: "abcd",
+    attribution: '© OpenStreetMap · © CARTO'
+  }).addTo(map);
+  drawSpotMarkers();
+}
+
+function spotIcon(type, isBest) {
+  const color = isBest ? "#ffb703" : ({
+    rock: "#0077b6", harbour: "#00b4d8", estuary: "#06a77d", beach: "#f4a261"
+  }[type] || "#0077b6");
+  const html = `<div style="background:${color};border:2px solid #fff;width:18px;height:18px;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`;
+  return L.divIcon({ html, className: "", iconSize: [18,18], iconAnchor: [9,9] });
+}
+
+function drawSpotMarkers(bestId = null) {
+  spotMarkers.forEach(m => map.removeLayer(m));
+  spotMarkers = [];
+  window.SYDNEY_SPOTS.forEach(s => {
+    const marker = L.marker([s.lat, s.lng], { icon: spotIcon(s.type, s.id === bestId) })
+      .addTo(map)
+      .bindPopup(`<b>${s.nameCn}</b><br><span style="color:#6b8299;font-size:11px">${s.name}</span><br>🐟 ${s.species.slice(0,3).join(" · ")}<br><a href="#" data-id="${s.id}" class="popup-link">查看详情 View →</a>`);
+    marker.on("popupopen", () => {
+      setTimeout(() => {
+        document.querySelectorAll(".popup-link").forEach(el => {
+          el.onclick = e => { e.preventDefault(); showDetail(s.id); };
+        });
+      }, 10);
+    });
+    spotMarkers.push(marker);
+  });
+}
+
+async function fetchWeather(lat, lng) {
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code&timezone=Australia%2FSydney`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("weather api failed");
+    const data = await res.json();
+    return data.current;
+  } catch (e) {
+    console.warn("weather fetch failed", e);
+    return null;
+  }
+}
+
+async function fetchMarine(lat, lng) {
+  try {
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&current=wave_height,wave_period,wind_wave_height&timezone=Australia%2FSydney`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("marine api failed");
+    const data = await res.json();
+    return data.current;
+  } catch (e) {
+    console.warn("marine fetch failed", e);
+    return null;
+  }
+}
+
+function scoreSpot(spot, userLoc, weather, marine) {
+  // Distance factor: 1.0 at 0km, drops to 0.3 at 40km+
+  const dist = userLoc ? haversineKm(userLoc, [spot.lat, spot.lng]) : 15;
+  const distFactor = Math.max(0.3, 1 - dist / 50);
+
+  // Condition factor: starts at 1, adjusted by wind/wave match
+  let cond = 1.0;
+  const reasons = [];
+
+  if (weather) {
+    const wind = weather.wind_speed_10m; // km/h
+    const dir = degToCompass(weather.wind_direction_10m);
+    if (wind != null) {
+      if (wind < 15) { cond *= 1.15; reasons.push("风力温和 " + wind.toFixed(0) + "km/h"); }
+      else if (wind < 25) { cond *= 1.0; }
+      else if (wind < 35) { cond *= 0.75; reasons.push("风力偏大 " + wind.toFixed(0) + "km/h"); }
+      else { cond *= 0.45; reasons.push("大风 " + wind.toFixed(0) + "km/h 慎钓"); }
+    }
+    // Wind direction preference
+    if (spot.prefers && spot.prefers.wind && !spot.prefers.wind.includes("any")) {
+      const prefixMatch = spot.prefers.wind.some(w => dir.startsWith(w));
+      if (prefixMatch) { cond *= 1.1; reasons.push("风向(" + dir + ")适合此点"); }
+      else { cond *= 0.85; }
+    }
+    if (weather.precipitation && weather.precipitation > 2) {
+      cond *= 0.8; reasons.push("降雨 " + weather.precipitation.toFixed(1) + "mm");
+    }
+  }
+
+  if (marine && marine.wave_height != null) {
+    const wh = marine.wave_height;
+    if (spot.type === "rock") {
+      if (wh < 1.2) { cond *= 1.1; reasons.push("涌浪小 " + wh.toFixed(1) + "m"); }
+      else if (wh < 2) { cond *= 0.9; reasons.push("涌浪中 " + wh.toFixed(1) + "m"); }
+      else { cond *= 0.45; reasons.push("⚠️ 涌浪大 " + wh.toFixed(1) + "m 岩钓危险"); }
+    } else if (spot.type === "beach") {
+      if (wh < 1.5) cond *= 1.05;
+      else if (wh > 2.5) { cond *= 0.7; reasons.push("海滩浪大"); }
+    }
+  }
+
+  // Time factor — dawn/dusk bonus
+  const now = new Date();
+  const hr = now.getHours();
+  let timeFactor = 1.0;
+  if ((hr >= 5 && hr <= 8) || (hr >= 17 && hr <= 20)) {
+    timeFactor = 1.15;
+    reasons.push("晨昏黄金时段");
+  } else if (hr >= 22 || hr <= 4) {
+    timeFactor = 0.9;
+  }
+
+  const score = spot.baseScore * distFactor * cond * timeFactor;
+  return { score, dist, reasons };
+}
+
+function getAccess(spotId) {
+  const d = (window.ACCESS_DATA && window.ACCESS_DATA[spotId]) || null;
+  if (!d || !d.score) return null;
+  return d;
+}
+
+function terrainLabel(t) {
+  return ({
+    easy: "🟢 轻松 · Easy",
+    moderate: "🟡 中等 · Moderate",
+    hard: "🟠 困难 · Hard",
+    extreme: "🔴 极难 · Extreme"
+  })[t] || "— 未评估";
+}
+
+function renderAccessSection(spotId) {
+  const a = getAccess(spotId);
+  if (!a) {
+    return `
+      <section>
+        <h4>交通便利 · Access</h4>
+        <div class="access-empty">此钓点的交通数据整理中 · Access data not yet available</div>
+      </section>`;
+  }
+  const stars = "★".repeat(a.score) + "☆".repeat(5 - a.score);
+  const scoreColor = a.score >= 4 ? "#06a77d" : a.score >= 3 ? "#ffb703" : "#ef476f";
+  return `
+    <section>
+      <h4>交通便利 · Access</h4>
+      <div class="access-card">
+        <div class="access-header">
+          <div class="access-stars" style="color:${scoreColor}">${stars}</div>
+          <div class="access-label">${a.score}/5 · ${terrainLabel(a.terrain)}</div>
+        </div>
+        <div class="access-row">
+          <span class="access-icon">🚗</span>
+          <div><b>自驾</b>${escapeHtml(a.drive)}</div>
+        </div>
+        <div class="access-row">
+          <span class="access-icon">🚌</span>
+          <div><b>公共交通</b>${escapeHtml(a.pt)}</div>
+        </div>
+        ${a.tips && a.tips.length ? `
+        <div class="access-tips-header">💬 钓友社区整理 · Community Tips</div>
+        <ul class="access-tips">
+          ${a.tips.map(t => `<li>${escapeHtml(t)}</li>`).join("")}
+        </ul>
+        <div class="access-disclaimer">* 以上为社区公开信息整理，非真实用户评论</div>
+        ` : ""}
+      </div>
+    </section>
+  `;
+}
+
+function render() {
+  const radius = parseFloat(document.getElementById("radiusSel").value);
+  const speciesFilter = document.getElementById("speciesSel").value;
+  const accessFilter = parseInt(document.getElementById("accessSel").value, 10) || 0;
+  const listEl = document.getElementById("spotList");
+
+  let spots = window.SYDNEY_SPOTS.slice();
+  if (speciesFilter) spots = spots.filter(s => s.species.includes(speciesFilter));
+  if (accessFilter) {
+    spots = spots.filter(s => {
+      const a = getAccess(s.id);
+      return a && a.score >= accessFilter;
+    });
+  }
+
+  const scored = spots.map(s => {
+    const r = scoreSpot(s, userLatLng, currentWeather?.weather, currentWeather?.marine);
+    return { spot: s, ...r };
+  });
+  if (userLatLng) scored.sort((a,b) => {
+    if (a.dist > radius && b.dist > radius) return a.score < b.score ? 1 : -1;
+    if (a.dist > radius) return 1;
+    if (b.dist > radius) return -1;
+    return b.score - a.score;
+  });
+  else scored.sort((a,b) => b.score - a.score);
+
+  sortedSpots = scored;
+
+  const visible = userLatLng ? scored.filter(s => s.dist <= radius) : scored;
+  const toShow = visible.length ? visible : scored.slice(0, 6);
+
+  listEl.innerHTML = "";
+  if (!toShow.length) {
+    listEl.innerHTML = `<div class="empty-state"><span class="emoji">🎣</span>该条件下暂无匹配的钓点<br><small>试试放大半径或更换鱼种</small></div>`;
+    return;
+  }
+  toShow.slice(0, 20).forEach((entry, i) => {
+    const s = entry.spot;
+    const a = getAccess(s.id);
+    const card = document.createElement("div");
+    card.className = "spot-card" + (i === 0 ? " best" : "");
+    card.innerHTML = `
+      <div class="rank-badge">${i + 1}</div>
+      <div class="spot-info">
+        <div class="spot-name">${s.nameCn}${i === 0 ? '<span class="best-tag">首选</span>' : ''}</div>
+        <div class="spot-name-en">${s.name}</div>
+        <div class="spot-meta">
+          ${userLatLng ? `<span>📍 ${entry.dist.toFixed(1)} km</span>` : ""}
+          <span class="type-badge type-${s.type}">${typeIcon(s.type)} ${typeLabel(s.type)}</span>
+          ${a ? `<span class="access-badge" title="交通便利 ${a.score}/5">🚗 ${"★".repeat(a.score)}${"☆".repeat(5-a.score)}</span>` : ""}
+        </div>
+        <div class="spot-species">${s.species.slice(0, 4).map(sp => `<span class="sp-chip">${sp}</span>`).join("")}</div>
+      </div>
+      <div class="score-box">
+        <b>${Math.round(entry.score)}</b>
+        <small>推荐分</small>
+      </div>
+    `;
+    card.onclick = () => showDetail(s.id);
+    listEl.appendChild(card);
+  });
+
+  if (toShow[0]) {
+    drawSpotMarkers(toShow[0].spot.id);
+  }
+}
+
+function typeLabel(t) {
+  return ({ rock: "岩钓", harbour: "港内", estuary: "河口", beach: "沙滩" })[t] || t;
+}
+function typeIcon(t) {
+  return ({ rock: "🪨", harbour: "⚓", estuary: "🏞️", beach: "🏖️" })[t] || "🌊";
+}
+
+function showDetail(id) {
+  const entry = sortedSpots.find(e => e.spot.id === id);
+  if (!entry) return;
+  const s = entry.spot;
+  const el = document.getElementById("detailContent");
+  el.innerHTML = `
+    <div class="detail-hero">
+      <button class="close" id="closeDetail">×</button>
+      <h2>${s.nameCn}</h2>
+      <div class="sub">${s.name} · ${typeIcon(s.type)} ${typeLabel(s.type)}${userLatLng ? " · " + entry.dist.toFixed(1) + " km 外" : ""}</div>
+      <div class="detail-chips">${s.species.map(sp => `<span class="chip">${sp}</span>`).join("")}</div>
+      <div class="detail-score">
+        <div class="detail-score-number">${Math.round(entry.score)}</div>
+        <div style="flex:1">
+          <div style="font-size:10px;opacity:.75;letter-spacing:.4px;margin-bottom:4px">综合推荐分 · Recommendation Score <a href="#" id="algoLink" style="color:#ffd166;text-decoration:underline">算法说明 ℹ️</a></div>
+          <div class="score-bar"><div style="width:${Math.min(100, entry.score)}%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="detail-body">
+      <section>
+        <h4>最佳时段 · Best Time</h4>
+        <p>${s.bestCn}</p>
+        <p class="en">${s.best}</p>
+      </section>
+
+      <section>
+        <h4>推荐钓法 · Techniques</h4>
+        <ul>${s.techniques.map(t => `<li>${t}</li>`).join("")}</ul>
+      </section>
+
+      <section>
+        <h4>现场提示 · Local Tips</h4>
+        <p>${s.tipsCn}</p>
+        <p class="en">${s.tips}</p>
+      </section>
+
+      ${entry.reasons.length ? `
+      <section>
+        <h4>当前评分依据 · Why Today</h4>
+        <ul class="reason-list">${entry.reasons.map(r => `<li>${r}</li>`).join("")}</ul>
+      </section>` : ""}
+
+      ${renderAccessSection(s.id)}
+
+      <section>
+        <h4>导航 · Directions</h4>
+        <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank">🧭 在 Google 地图打开路线</a>
+      </section>
+
+      <section>
+        <h4>钓友评论 · Reviews</h4>
+        ${renderReviewsSection(s.id)}
+      </section>
+    </div>
+  `;
+  // re-bind close button (it's now inside dynamic content)
+  document.getElementById("closeDetail").onclick = () => document.getElementById("detail").classList.add("hidden");
+  // algo link inside detail
+  const algoLink = document.getElementById("algoLink");
+  if (algoLink) algoLink.onclick = (e) => {
+    e.preventDefault();
+    document.getElementById("algoModal").classList.remove("hidden");
+  };
+  // bind review form
+  bindReviewForm(s.id);
+  document.getElementById("detail").classList.remove("hidden");
+  map.flyTo([s.lat, s.lng], 14, { duration: 0.8 });
+}
+
+function showWeather() {
+  const box = document.getElementById("weatherBox");
+  if (!currentWeather || !currentWeather.weather) { box.classList.add("hidden"); return; }
+  const w = currentWeather.weather;
+  const m = currentWeather.marine;
+  const content = document.getElementById("weatherContent");
+  content.innerHTML = `
+    <div class="row"><span>气温 Temp</span><span>${w.temperature_2m?.toFixed(1) ?? "-"} °C</span></div>
+    <div class="row"><span>风 Wind</span><span>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</span></div>
+    <div class="row"><span>降雨 Rain</span><span>${w.precipitation?.toFixed(1) ?? 0} mm</span></div>
+    ${m ? `<div class="row"><span>浪高 Wave</span><span>${m.wave_height?.toFixed(1) ?? "-"} m</span></div>` : ""}
+    ${m ? `<div class="row"><span>周期 Period</span><span>${m.wave_period?.toFixed(0) ?? "-"} s</span></div>` : ""}
+  `;
+  box.classList.remove("hidden");
+}
+
+async function locateUser() {
+  const btn = document.getElementById("locateBtn");
+  const status = document.getElementById("status");
+  if (!navigator.geolocation) {
+    status.textContent = "浏览器不支持定位，使用悉尼市中心作默认位置。";
+    status.classList.add("error");
+    userLatLng = SYDNEY_CENTER;
+    await loadConditions();
+    render();
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = "定位中…";
+  status.classList.remove("error");
+  status.textContent = "获取您的位置…";
+
+  navigator.geolocation.getCurrentPosition(async pos => {
+    userLatLng = [pos.coords.latitude, pos.coords.longitude];
+    if (userMarker) map.removeLayer(userMarker);
+    userMarker = L.marker(userLatLng, {
+      icon: L.divIcon({
+        html: '<div style="background:#ffb703;border:3px solid #fff;width:20px;height:20px;border-radius:50%;box-shadow:0 0 0 6px rgba(255,183,3,.25)"></div>',
+        iconSize: [20,20], iconAnchor: [10,10], className: ""
+      })
+    }).addTo(map).bindPopup("您的位置 · You are here");
+    map.flyTo(userLatLng, 12, { duration: 0.8 });
+    status.textContent = "正在获取实时海况…";
+    await loadConditions();
+    render();
+    const best = sortedSpots[0];
+    if (best) {
+      status.textContent = `✅ 推荐：${best.spot.nameCn}（${best.dist.toFixed(1)} km）· 评分 ${Math.round(best.score)}`;
+    }
+    btn.disabled = false;
+    btn.textContent = "📍 刷新";
+  }, err => {
+    status.textContent = "无法获取定位（" + err.message + "），使用悉尼市中心。";
+    status.classList.add("error");
+    userLatLng = SYDNEY_CENTER;
+    loadConditions().then(render);
+    btn.disabled = false;
+    btn.textContent = "📍 定位我";
+  }, { enableHighAccuracy: true, timeout: 10000 });
+}
+
+async function loadConditions() {
+  if (!userLatLng) return;
+  const [weather, marine] = await Promise.all([
+    fetchWeather(userLatLng[0], userLatLng[1]),
+    fetchMarine(userLatLng[0], userLatLng[1])
+  ]);
+  currentWeather = { weather, marine };
+  showWeather();
+}
+
+// ---------- Reviews ----------
+const REVIEW_KEY = "sf_reviews_v1";
+
+function loadUserReviews() {
+  try { return JSON.parse(localStorage.getItem(REVIEW_KEY) || "{}"); }
+  catch (e) { return {}; }
+}
+function saveUserReviews(obj) {
+  try { localStorage.setItem(REVIEW_KEY, JSON.stringify(obj)); } catch (e) {}
+}
+function getAllReviews(spotId) {
+  const seeded = (window.SEED_REVIEWS && window.SEED_REVIEWS[spotId]) || [];
+  const user = loadUserReviews()[spotId] || [];
+  return [...user, ...seeded];
+}
+function avgRating(reviews) {
+  if (!reviews.length) return 0;
+  return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+}
+function starString(n) {
+  const full = Math.round(n);
+  return "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
+}
+function renderReviewsSection(spotId) {
+  const reviews = getAllReviews(spotId);
+  const avg = avgRating(reviews);
+  const summary = reviews.length
+    ? `<div class="reviews-summary">
+         <div>
+           <div class="big-star">${avg.toFixed(1)}</div>
+         </div>
+         <div>
+           <div class="stars-line">${starString(avg)}</div>
+           <div class="count">${reviews.length} 条钓友评论 · ${reviews.length} reviews</div>
+         </div>
+       </div>`
+    : `<div class="no-reviews">暂无评论，来做第一个分享鱼获的钓友吧 🎣</div>`;
+
+  const list = reviews.map(r => `
+    <div class="review-item">
+      <div class="review-head">
+        <div class="review-user">
+          <div class="review-avatar">${(r.user || "?").slice(0,1).toUpperCase()}</div>
+          <div>
+            ${escapeHtml(r.user)}
+            <div class="review-date">${r.date}</div>
+          </div>
+        </div>
+      </div>
+      <div class="review-stars">${starString(r.rating)}</div>
+      <div class="review-text">${escapeHtml(r.text)}</div>
+    </div>
+  `).join("");
+
+  return `
+    ${summary}
+    <div class="review-list">${list}</div>
+    <div class="review-form">
+      <h5>写下你的评论 · Leave a Review</h5>
+      <input type="text" id="rv-user" maxlength="20" placeholder="昵称 Nickname" />
+      <div class="star-picker" id="rv-stars" data-value="5">
+        <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span>
+        <span data-v="4">★</span><span data-v="5">★</span>
+      </div>
+      <textarea id="rv-text" maxlength="400" placeholder="分享一下你的鱼获、饵料或当天的海况… Share your catch, bait, or conditions..."></textarea>
+      <button class="review-submit" id="rv-submit" data-spot="${spotId}">发布评论</button>
+    </div>
+  `;
+}
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
+}
+function bindReviewForm(spotId) {
+  const picker = document.getElementById("rv-stars");
+  if (!picker) return;
+  const spans = picker.querySelectorAll("span");
+  const paint = v => spans.forEach(s => s.classList.toggle("active", +s.dataset.v <= v));
+  paint(5);
+  spans.forEach(s => {
+    s.addEventListener("click", () => {
+      picker.dataset.value = s.dataset.v;
+      paint(+s.dataset.v);
+    });
+  });
+  document.getElementById("rv-submit").addEventListener("click", () => {
+    const user = document.getElementById("rv-user").value.trim() || "匿名钓友";
+    const text = document.getElementById("rv-text").value.trim();
+    const rating = parseInt(picker.dataset.value, 10) || 5;
+    if (!text) { alert("请输入评论内容"); return; }
+    const all = loadUserReviews();
+    const list = all[spotId] || [];
+    list.unshift({
+      user, rating, text,
+      date: new Date().toISOString().slice(0, 10)
+    });
+    all[spotId] = list;
+    saveUserReviews(all);
+    // re-open detail to refresh
+    showDetail(spotId);
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  initMap();
+  render();
+  document.getElementById("locateBtn").addEventListener("click", locateUser);
+  document.getElementById("radiusSel").addEventListener("change", render);
+  document.getElementById("speciesSel").addEventListener("change", render);
+  document.getElementById("accessSel").addEventListener("change", render);
+  document.getElementById("detail").addEventListener("click", e => {
+    if (e.target.id === "detail") document.getElementById("detail").classList.add("hidden");
+  });
+  // Algorithm modal
+  document.getElementById("algoBtn").addEventListener("click", () => {
+    document.getElementById("algoModal").classList.remove("hidden");
+  });
+  document.getElementById("closeAlgo").addEventListener("click", () => {
+    document.getElementById("algoModal").classList.add("hidden");
+  });
+  document.getElementById("algoModal").addEventListener("click", e => {
+    if (e.target.id === "algoModal") document.getElementById("algoModal").classList.add("hidden");
+  });
+});

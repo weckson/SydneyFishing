@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Sydney Fishing · 悉尼钓鱼</title>
+
+<!-- PWA manifest -->
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#012a4a" />
+<meta name="description" content="悉尼钓点智能推荐 · 实时海况 · 交通便利评估" />
+
+<!-- iOS Add to Home Screen -->
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="悉尼钓鱼" />
+<link rel="apple-touch-icon" href="icons/icon-180.png" />
+<link rel="apple-touch-icon" sizes="120x120" href="icons/icon-120.png" />
+<link rel="apple-touch-icon" sizes="152x152" href="icons/icon-152.png" />
+<link rel="apple-touch-icon" sizes="167x167" href="icons/icon-167.png" />
+<link rel="apple-touch-icon" sizes="180x180" href="icons/icon-180.png" />
+
+<!-- Favicon -->
+<link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png" />
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+<link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">🎣</div>
+    <div>
+      <h1>悉尼钓鱼 · Sydney Fishing</h1>
+      <p class="tag">钓点 · 潮汐 · 海况 · 智能推荐</p>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button id="algoBtn" class="icon-btn" title="算法说明">ℹ️ 算法</button>
+    <button id="locateBtn" class="locate-btn"><span>📍</span> 定位我</button>
+  </div>
+</header>
+
+<main>
+  <section id="panel" class="panel">
+    <div class="panel-header">
+      <h2>附近最佳钓点 <span class="h2-en">Best Spots Nearby</span></h2>
+      <div class="controls">
+        <label>搜索半径 / Radius
+          <select id="radiusSel">
+            <option value="5">5 公里</option>
+            <option value="10">10 公里</option>
+            <option value="20" selected>20 公里</option>
+            <option value="50">50 公里</option>
+            <option value="999">全悉尼 All Sydney</option>
+          </select>
+        </label>
+        <label>交通便利 / Access
+          <select id="accessSel">
+            <option value="0">不限</option>
+            <option value="3">★★★ 及以上</option>
+            <option value="4">★★★★ 及以上</option>
+            <option value="5">★★★★★ 仅轻松达</option>
+          </select>
+        </label>
+        <label>目标鱼种 / Species
+          <select id="speciesSel">
+            <option value="">全部鱼种 All</option>
+            <option value="Kingfish">澳洲黄尾鰤 Kingfish</option>
+            <option value="Bream">黑鲷 Bream</option>
+            <option value="Flathead">扁头鱼 Flathead</option>
+            <option value="Whiting">沙梭 Whiting</option>
+            <option value="Tailor">竹荚鱼 Tailor</option>
+            <option value="Salmon">澳洲鲑 Salmon</option>
+            <option value="Jewfish">石首鱼 Jewfish</option>
+            <option value="Drummer">黑毛 Drummer</option>
+            <option value="Squid">鱿鱼 Squid</option>
+            <option value="Trevally">鲹鱼 Trevally</option>
+            <option value="Luderick">黑鱼 Luderick</option>
+            <option value="Groper">隆头鱼 Groper</option>
+          </select>
+        </label>
+      </div>
+    </div>
+    <div id="status" class="status">点击右上「📍 定位我」获取附近最佳钓点 · Tap Locate to begin</div>
+    <div id="spotList" class="spot-list"></div>
+  </section>
+
+  <section class="map-wrap">
+    <div id="map"></div>
+    <div id="weatherBox" class="weather-box hidden">
+      <h3>当前海况 · Live</h3>
+      <div id="weatherContent"></div>
+    </div>
+  </section>
+</main>
+
+<div id="detail" class="detail hidden">
+  <div class="detail-card" id="detailContent"></div>
+</div>
+
+<!-- Algorithm explanation modal -->
+<div id="algoModal" class="detail hidden">
+  <div class="detail-card">
+    <div class="detail-hero">
+      <button class="close" id="closeAlgo">×</button>
+      <h2>智能打分算法</h2>
+      <div class="sub">How the Recommendation Score is calculated</div>
+    </div>
+    <div class="detail-body">
+      <section>
+        <h4>核心公式 · Formula</h4>
+        <div class="formula">
+          推荐分 = 基础声誉 × 距离因子 × 海况因子 × 时段因子
+        </div>
+        <p class="en">Score = baseScore × distanceFactor × conditionFactor × timeFactor</p>
+      </section>
+
+      <section>
+        <h4>① 基础声誉 · Base Reputation (0–100)</h4>
+        <p>每个钓点由悉尼本地钓友社区的历史口碑决定，范围 <b>65–94</b>。例如 Hornby Lighthouse（94）是传奇岸钓黄尾平台；小型家庭钓点通常在 65–75。</p>
+      </section>
+
+      <section>
+        <h4>② 距离因子 · Distance Factor</h4>
+        <p>根据你与钓点的直线距离（Haversine 公式）计算：</p>
+        <div class="formula">distFactor = max(0.3, 1 − 距离km / 50)</div>
+        <p>距离为 0 时因子 = 1.0；20 km 时 = 0.6；50 km 以上最低 0.3。</p>
+      </section>
+
+      <section>
+        <h4>③ 海况因子 · Condition Factor</h4>
+        <p>由 Open-Meteo 免费 API 实时获取当前天气和海浪数据，按以下规则调整：</p>
+        <ul>
+          <li><b>风力</b>：&lt;15 km/h 加成 ×1.15；15–25 中性；25–35 扣 ×0.75；&gt;35 严重扣 ×0.45</li>
+          <li><b>风向匹配</b>：钓点偏好风向（如岩钓点偏好 W/NW 陆风），匹配 ×1.10，不匹配 ×0.85</li>
+          <li><b>降雨</b>：大雨 (&gt;2mm) 扣 ×0.8</li>
+          <li><b>浪高</b>（岩钓点）：&lt;1.2m 加成 ×1.10；1.2–2m 扣 ×0.9；<span style="color:#e63946">&gt;2m 扣 ×0.45 并显示⚠️ 危险警告</span></li>
+          <li><b>浪高</b>（海滩点）：&lt;1.5m 小加成；&gt;2.5m 扣 ×0.7</li>
+        </ul>
+      </section>
+
+      <section>
+        <h4>④ 时段因子 · Time Factor</h4>
+        <p>基于钓鱼"晨昏黄金时段"常识：</p>
+        <ul>
+          <li>05:00–08:00 或 17:00–20:00 ：×1.15（晨昏加成）</li>
+          <li>22:00–04:00 ：×0.90（深夜，多数鱼种活跃度降低）</li>
+          <li>其它时段 ：×1.00</li>
+        </ul>
+      </section>
+
+      <section>
+        <h4>举例 · Example</h4>
+        <p>假设你在 Bondi（距离 Shark Point 1.5 km），时间清晨 6 点，风 NW 10 km/h，浪 0.8m：</p>
+        <div class="formula">
+          84 × (1 − 1.5/50) × (1.15 × 1.10 × 1.10) × 1.15<br>
+          = 84 × 0.97 × 1.39 × 1.15 ≈ <b style="color:#fb8500">130</b>
+        </div>
+        <p>分数可以超过 100 —— 说明该点位在当前条件下比平均水准更理想。</p>
+      </section>
+
+      <section>
+        <h4>透明度 · Transparency</h4>
+        <p>打开任意钓点详情，底部"<b>当前评分依据</b>"会列出每条规则对该点的影响（例如"风向 NW 适合此点 · 晨昏黄金时段 · 涌浪小 0.8m"），你可以看到分数究竟是怎么来的。</p>
+      </section>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="spots.js"></script>
+<script src="reviews.js"></script>
+<script src="access.js"></script>
+<script src="app.js"></script>
+
+<!-- PWA Service Worker registration -->
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("service-worker.js")
+      .then(reg => console.log("[PWA] SW registered:", reg.scope))
+      .catch(err => console.warn("[PWA] SW registration failed:", err));
+  });
+}
+
+// iOS "Add to Home Screen" hint — show once for first-time Safari visitors
+(function() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true ||
+                       window.matchMedia("(display-mode: standalone)").matches;
+  if (isIOS && !isStandalone && !localStorage.getItem("sf_a2hs_dismissed")) {
+    window.addEventListener("load", () => {
+      setTimeout(() => {
+        const banner = document.createElement("div");
+        banner.className = "a2hs-banner";
+        banner.innerHTML = `
+          <div class="a2hs-icon">🎣</div>
+          <div class="a2hs-text">
+            <b>加入主屏幕</b>
+            <small>点击 Safari 分享按钮 <span style="font-size:16px">⎋</span> → 添加到主屏幕</small>
+          </div>
+          <button class="a2hs-close">×</button>
+        `;
+        document.body.appendChild(banner);
+        banner.querySelector(".a2hs-close").onclick = () => {
+          banner.remove();
+          localStorage.setItem("sf_a2hs_dismissed", "1");
+        };
+      }, 2500);
+    });
+  }
+})();
+</script>
+</body>
+</html>
