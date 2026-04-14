@@ -45,7 +45,12 @@
 <main>
   <section id="panel" class="panel">
     <div class="panel-header">
-      <h2>附近最佳钓点 <span class="h2-en">Best Spots Nearby</span></h2>
+      <h2>今日推荐钓点 <span class="h2-en">Today's Recommended Spots</span></h2>
+      <div class="mode-selector">
+        <button class="mode-btn active" data-mode="fish">🏆 鱼况优先</button>
+        <button class="mode-btn" data-mode="near">📍 就近</button>
+        <button class="mode-btn" data-mode="family">👨‍👩‍👧 家庭</button>
+      </div>
       <div class="controls">
         <label>搜索半径 / Radius
           <select id="radiusSel">
@@ -105,65 +110,104 @@
   <div class="detail-card">
     <div class="detail-hero">
       <button class="close" id="closeAlgo">×</button>
-      <h2>智能打分算法</h2>
-      <div class="sub">How the Recommendation Score is calculated</div>
+      <h2>智能打分算法 v1.1</h2>
+      <div class="sub">How the Recommendation Score is calculated · 三种模式 / 六个因子</div>
     </div>
     <div class="detail-body">
       <section>
         <h4>核心公式 · Formula</h4>
         <div class="formula">
-          推荐分 = 基础声誉 × 距离因子 × 海况因子 × 时段因子
+          推荐分 = 基础声誉<br>
+          × 海况因子 × 潮汐因子 × 时段因子<br>
+          × 交通因子 × 距离惩罚
         </div>
-        <p class="en">Score = baseScore × distanceFactor × conditionFactor × timeFactor</p>
+        <p class="en">Score = baseScore × weather × tide × time × access × distance</p>
       </section>
 
       <section>
-        <h4>① 基础声誉 · Base Reputation (0–100)</h4>
-        <p>每个钓点由悉尼本地钓友社区的历史口碑决定，范围 <b>65–94</b>。例如 Hornby Lighthouse（94）是传奇岸钓黄尾平台；小型家庭钓点通常在 65–75。</p>
-      </section>
-
-      <section>
-        <h4>② 距离因子 · Distance Factor</h4>
-        <p>根据你与钓点的直线距离（Haversine 公式）计算：</p>
-        <div class="formula">distFactor = max(0.3, 1 − 距离km / 50)</div>
-        <p>距离为 0 时因子 = 1.0；20 km 时 = 0.6；50 km 以上最低 0.3。</p>
-      </section>
-
-      <section>
-        <h4>③ 海况因子 · Condition Factor</h4>
-        <p>由 Open-Meteo 免费 API 实时获取当前天气和海浪数据，按以下规则调整：</p>
+        <h4>🎯 三种模式 · Three Modes</h4>
+        <p>顶部切换，改变每个因子的权重和过滤规则：</p>
         <ul>
-          <li><b>风力</b>：&lt;15 km/h 加成 ×1.15；15–25 中性；25–35 扣 ×0.75；&gt;35 严重扣 ×0.45</li>
-          <li><b>风向匹配</b>：钓点偏好风向（如岩钓点偏好 W/NW 陆风），匹配 ×1.10，不匹配 ×0.85</li>
-          <li><b>降雨</b>：大雨 (&gt;2mm) 扣 ×0.8</li>
-          <li><b>浪高</b>（岩钓点）：&lt;1.2m 加成 ×1.10；1.2–2m 扣 ×0.9；<span style="color:#e63946">&gt;2m 扣 ×0.45 并显示⚠️ 危险警告</span></li>
-          <li><b>浪高</b>（海滩点）：&lt;1.5m 小加成；&gt;2.5m 扣 ×0.7</li>
+          <li><b>🏆 鱼况优先 (默认)</b>：距离完全忽略，baseScore 主导。适合计划一次远征。Barrenjoey 60km 外 vs 身边小点，前者胜。</li>
+          <li><b>📍 就近钓点</b>：应用距离惩罚。下班顺路/时间紧张。身边的点排上来。</li>
+          <li><b>👨‍👩‍👧 家庭友好</b>：强化交通权重 (0.5–1.25)，且<b style="color:#e63946">自动隐藏</b>所有困难/极难地形 (如 Hornby Light、Cape Banks、Diamond Bay)。火车可达的 Brooklyn、Como、Balmoral 排前列。</li>
         </ul>
       </section>
 
       <section>
-        <h4>④ 时段因子 · Time Factor</h4>
-        <p>基于钓鱼"晨昏黄金时段"常识：</p>
+        <h4>① 基础声誉 · Base Reputation (0–100)</h4>
+        <p>每个钓点由悉尼本地钓友社区的历史口碑决定，范围 <b>65–94</b>。例如 Hornby Lighthouse（94）是传奇岸钓黄尾平台；小型家庭钓点通常在 65–75。<b>这是"鱼况"的代理值</b>。</p>
+      </section>
+
+      <section>
+        <h4>② 海况因子 · Weather Factor</h4>
+        <p>Open-Meteo 免费 API 实时拉取天气 + 海浪：</p>
         <ul>
-          <li>05:00–08:00 或 17:00–20:00 ：×1.15（晨昏加成）</li>
-          <li>22:00–04:00 ：×0.90（深夜，多数鱼种活跃度降低）</li>
-          <li>其它时段 ：×1.00</li>
+          <li><b>风力</b>：&lt;15 km/h ×1.15；25–35 ×0.75；&gt;35 ×0.45</li>
+          <li><b>风向匹配</b>：钓点偏好风向匹配 ×1.10</li>
+          <li><b>降雨</b>：&gt;2mm 雨 ×0.8</li>
+          <li><b>岩钓浪高</b>：&lt;1.2m ×1.10；1.2–2m ×0.9；<span style="color:#e63946">&gt;2m ×0.45 + ⚠️ 危险警告</span></li>
+          <li><b>海滩浪高</b>：&lt;1.5m ×1.05；&gt;2.5m ×0.7</li>
+        </ul>
+      </section>
+
+      <section>
+        <h4>③ 潮汐因子 · Tide Factor (v1.1 新)</h4>
+        <p>Open-Meteo Marine API 每小时 <code>sea_level_height_msl</code> 数据，分析当前趋势：</p>
+        <ul>
+          <li><b>涨潮/退潮精准匹配</b>：×1.18</li>
+          <li><b>换潮期 (石首鱼金窗口)</b>：×1.22</li>
+          <li><b>高潮/低潮固定偏好匹配</b>：×1.20</li>
+          <li><b>方向大致匹配</b>：×1.08</li>
+          <li><b>不匹配</b>：×0.90</li>
+        </ul>
+        <p>每个钓点根据类型默认偏好：岩钓/沙滩 → 涨潮；河口 → 退潮；港内 → 不敏感。个别特殊点位（如 Brooklyn 的石首鱼点）显式标注为"换潮期最佳"。</p>
+      </section>
+
+      <section>
+        <h4>④ 时段因子 · Time Factor</h4>
+        <ul>
+          <li>05:00–08:00 / 17:00–20:00 ×1.15（晨昏黄金）</li>
+          <li>22:00–04:00 ×0.90（深夜多数鱼种活跃度降）</li>
+          <li>其它 ×1.00</li>
+        </ul>
+      </section>
+
+      <section>
+        <h4>⑤ 交通因子 · Access Factor (v1.1 新)</h4>
+        <p>根据 access.js 中的交通便利星级 (1–5) 线性插值，模式决定范围：</p>
+        <ul>
+          <li><b>鱼况优先</b>：0.95–1.05（几乎不影响）</li>
+          <li><b>就近</b>：0.90–1.10</li>
+          <li><b>家庭友好</b>：0.50–1.25（强烈影响）</li>
+        </ul>
+      </section>
+
+      <section>
+        <h4>⑥ 距离惩罚 · Distance Penalty</h4>
+        <ul>
+          <li><b>鱼况优先</b>：恒等于 1.0 —— 完全忽略</li>
+          <li><b>就近</b>：max(0.3, 1 − d/50)</li>
+          <li><b>家庭</b>：max(0.75, 1 − d/80)（温和）</li>
         </ul>
       </section>
 
       <section>
         <h4>举例 · Example</h4>
-        <p>假设你在 Bondi（距离 Shark Point 1.5 km），时间清晨 6 点，风 NW 10 km/h，浪 0.8m：</p>
+        <p>鱼况优先模式下，清晨 6 点，风 NW 10 km/h，浪 0.8m，涨潮中。Hornby Light (94 分) 距离 40 km：</p>
         <div class="formula">
-          84 × (1 − 1.5/50) × (1.15 × 1.10 × 1.10) × 1.15<br>
-          = 84 × 0.97 × 1.39 × 1.15 ≈ <b style="color:#fb8500">130</b>
+          94 × 1.39 (weather) × 1.18 (tide ↗)<br>
+          × 1.15 (dawn) × 1.00 (access 弱) × 1.00 (dist)<br>
+          ≈ <b style="color:#fb8500">177</b>
         </div>
-        <p>分数可以超过 100 —— 说明该点位在当前条件下比平均水准更理想。</p>
+        <p>同样条件下，Bradleys Head (82 分) 距离 2 km：</p>
+        <div class="formula">82 × 1.39 × 1.18 × 1.15 × 1.00 × 1.00 ≈ <b style="color:#fb8500">154</b></div>
+        <p>Hornby 胜，这就是鱼况优先的行为。切换到"就近"模式，Hornby 距离惩罚变为 0.2，最终分降到 35，Bradleys 变最佳。</p>
       </section>
 
       <section>
         <h4>透明度 · Transparency</h4>
-        <p>打开任意钓点详情，底部"<b>当前评分依据</b>"会列出每条规则对该点的影响（例如"风向 NW 适合此点 · 晨昏黄金时段 · 涌浪小 0.8m"），你可以看到分数究竟是怎么来的。</p>
+        <p>打开任意钓点详情，底部"<b>当前评分依据</b>"会列出每个因子的具体影响。打分完全可追溯。</p>
       </section>
     </div>
   </div>
@@ -174,6 +218,7 @@
 <script src="spots.js"></script>
 <script src="reviews.js"></script>
 <script src="access.js"></script>
+<script src="rigs.js"></script>
 <script src="app.js"></script>
 
 <!-- PWA Service Worker registration -->

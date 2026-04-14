@@ -1,16 +1,53 @@
 // Sydney Fishing App — main logic
 // - Leaflet map of Sydney
 // - Geolocation to find nearest best spots
-// - Open-Meteo free weather + marine API (no key) for scoring
-// - Score = baseScore * distanceFactor * conditionFactor * timeFactor
+// - Open-Meteo free weather + marine + tide API (no key) for scoring
+// - Score = baseScore × weatherMult × tideMult × timeMult × accessMult × distancePenalty
+//   (factor weights vary by mode: fish / near / family)
 
 const SYDNEY_CENTER = [-33.8688, 151.2093];
 const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 
+// ---------- Scoring Modes ----------
+// Each mode adjusts how much each factor influences the final score.
+const SCORING_MODES = {
+  fish: {
+    label: "🏆 鱼况优先",
+    description: "忽略距离，baseScore 主导；最适合计划一次钓鱼远征",
+    distancePenalty: () => 1.0,
+    accessRange: [0.95, 1.05],   // very gentle
+    terrainFilter: null
+  },
+  near: {
+    label: "📍 就近钓点",
+    description: "按距离惩罚排序；适合下班顺路/时间紧",
+    distancePenalty: d => Math.max(0.3, 1 - d / 50),
+    accessRange: [0.90, 1.10],
+    terrainFilter: null
+  },
+  family: {
+    label: "👨‍👩‍👧 家庭友好",
+    description: "强化交通权重，自动隐藏危险岩钓点",
+    distancePenalty: d => Math.max(0.75, 1 - d / 80),
+    accessRange: [0.50, 1.25],   // strong
+    terrainFilter: ["hard", "extreme"]
+  }
+};
+
+const DEFAULT_TIDE_BY_TYPE = {
+  rock: "rising",
+  beach: "rising",
+  estuary: "falling",
+  harbour: "any"
+};
+
 let map, userMarker, userLatLng = null;
 let spotMarkers = [];
-let currentWeather = null;
+let currentWeather = null;  // { weather, marine, tide }
 let sortedSpots = [];
+let currentMode = "fish";   // default: fish-first
+
+function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
 
 function degToCompass(deg) {
   if (deg == null) return "-";
@@ -91,60 +128,196 @@ async function fetchMarine(lat, lng) {
   }
 }
 
-function scoreSpot(spot, userLoc, weather, marine) {
-  // Distance factor: 1.0 at 0km, drops to 0.3 at 40km+
-  const dist = userLoc ? haversineKm(userLoc, [spot.lat, spot.lng]) : 15;
-  const distFactor = Math.max(0.3, 1 - dist / 50);
+async function fetchTide(lat, lng) {
+  try {
+    const url = `https://marine-api.open-meteo.com/v1/marine?latitude=${lat}&longitude=${lng}&hourly=sea_level_height_msl&timezone=Australia%2FSydney&past_days=1&forecast_days=2`;
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("tide api failed");
+    const data = await res.json();
+    if (!data.hourly || !data.hourly.time || !data.hourly.sea_level_height_msl) return null;
+    return analyzeTide(data.hourly);
+  } catch (e) {
+    console.warn("tide fetch failed", e);
+    return null;
+  }
+}
 
-  // Condition factor: starts at 1, adjusted by wind/wave match
-  let cond = 1.0;
+// Analyze sea_level_height_msl hourly series → current phase, trend, next high/low.
+function analyzeTide(hourly) {
+  const times = hourly.time.map(t => new Date(t));
+  const levels = hourly.sea_level_height_msl;
+  const now = Date.now();
+  // Find the index closest to now
+  let idx = 0;
+  for (let i = 0; i < times.length; i++) {
+    if (times[i].getTime() <= now) idx = i;
+    else break;
+  }
+  const current = levels[idx];
+  const prev = levels[Math.max(0, idx - 1)];
+  const next = levels[Math.min(levels.length - 1, idx + 1)];
+
+  // Trend: compare neighbors
+  let trend;
+  if (next > current + 0.02) trend = "rising";
+  else if (next < current - 0.02) trend = "falling";
+  else trend = "slack";
+
+  // Find next high and low in next 12h (local extrema)
+  let nextHigh = null, nextLow = null;
+  for (let i = idx + 1; i < Math.min(levels.length - 1, idx + 14); i++) {
+    const L = levels[i];
+    if (!nextHigh && L > levels[i - 1] && L > levels[i + 1]) {
+      nextHigh = { time: times[i], level: L };
+    }
+    if (!nextLow && L < levels[i - 1] && L < levels[i + 1]) {
+      nextLow = { time: times[i], level: L };
+    }
+    if (nextHigh && nextLow) break;
+  }
+
+  const hoursToHigh = nextHigh ? (nextHigh.time.getTime() - now) / 3600000 : null;
+  const hoursToLow = nextLow ? (nextLow.time.getTime() - now) / 3600000 : null;
+
+  // Phase classification
+  let phase;
+  const minHours = Math.min(
+    hoursToHigh != null ? hoursToHigh : Infinity,
+    hoursToLow != null ? hoursToLow : Infinity
+  );
+  const isNearHigh = hoursToHigh != null && hoursToHigh < 1;
+  const isNearLow = hoursToLow != null && hoursToLow < 1;
+  if (isNearHigh) phase = "high-slack";
+  else if (isNearLow) phase = "low-slack";
+  else if (trend === "rising") phase = "rising";
+  else if (trend === "falling") phase = "falling";
+  else phase = "slack";
+
+  return { current, trend, phase, nextHigh, nextLow, hoursToHigh, hoursToLow };
+}
+
+// Map spot's preferredTide (or default by type) + current tide data → factor + reason.
+function tideFactorFor(spot, tide) {
+  if (!tide) return { mult: 1.0, reason: null };
+  const pref = spot.preferredTide || DEFAULT_TIDE_BY_TYPE[spot.type] || "any";
+  if (pref === "any") return { mult: 1.0, reason: null };
+
+  const phase = tide.phase;
+  const trend = tide.trend;
+
+  // Exact phase match
+  if (pref === "rising" && (phase === "rising" || phase === "low-slack")) {
+    return { mult: 1.18, reason: "涨潮匹配 Rising ↗ (+18%)" };
+  }
+  if (pref === "falling" && (phase === "falling" || phase === "high-slack")) {
+    return { mult: 1.18, reason: "退潮匹配 Falling ↘ (+18%)" };
+  }
+  if (pref === "high" && phase === "high-slack") {
+    return { mult: 1.20, reason: "高潮匹配 High Tide (+20%)" };
+  }
+  if (pref === "low" && phase === "low-slack") {
+    return { mult: 1.20, reason: "低潮匹配 Low Tide (+20%)" };
+  }
+  if (pref === "change" && (phase === "high-slack" || phase === "low-slack")) {
+    return { mult: 1.22, reason: "换潮期 Tide Change (+22%)" };
+  }
+  // Partial match: close to preferred direction
+  if (pref === "rising" && trend === "rising") return { mult: 1.08, reason: "潮位上涨中 (+8%)" };
+  if (pref === "falling" && trend === "falling") return { mult: 1.08, reason: "潮位下降中 (+8%)" };
+  // Mismatch
+  return { mult: 0.90, reason: "潮位不理想 (-10%)" };
+}
+
+function scoreSpot(spot, userLoc, weather, marine, tide, mode) {
+  const modeCfg = SCORING_MODES[mode] || SCORING_MODES.fish;
   const reasons = [];
 
+  // ----- Distance (mode-dependent) -----
+  const dist = userLoc ? haversineKm(userLoc, [spot.lat, spot.lng]) : 15;
+  const distancePenalty = modeCfg.distancePenalty(dist);
+  if (mode === "fish") {
+    reasons.push("距离忽略 (鱼况优先)");
+  } else if (mode === "near" && distancePenalty < 0.95) {
+    reasons.push(`距离 ${dist.toFixed(1)}km (${((distancePenalty - 1) * 100).toFixed(0)}%)`);
+  } else if (mode === "family" && distancePenalty < 1.0) {
+    reasons.push(`距离 ${dist.toFixed(1)}km (轻微)`);
+  }
+
+  // ----- Weather factor -----
+  let weatherMult = 1.0;
   if (weather) {
-    const wind = weather.wind_speed_10m; // km/h
+    const wind = weather.wind_speed_10m;
     const dir = degToCompass(weather.wind_direction_10m);
     if (wind != null) {
-      if (wind < 15) { cond *= 1.15; reasons.push("风力温和 " + wind.toFixed(0) + "km/h"); }
-      else if (wind < 25) { cond *= 1.0; }
-      else if (wind < 35) { cond *= 0.75; reasons.push("风力偏大 " + wind.toFixed(0) + "km/h"); }
-      else { cond *= 0.45; reasons.push("大风 " + wind.toFixed(0) + "km/h 慎钓"); }
+      if (wind < 15) { weatherMult *= 1.15; reasons.push("风力温和 " + wind.toFixed(0) + "km/h"); }
+      else if (wind < 25) { weatherMult *= 1.0; }
+      else if (wind < 35) { weatherMult *= 0.75; reasons.push("风力偏大 " + wind.toFixed(0) + "km/h"); }
+      else { weatherMult *= 0.45; reasons.push("大风 " + wind.toFixed(0) + "km/h 慎钓"); }
     }
-    // Wind direction preference
     if (spot.prefers && spot.prefers.wind && !spot.prefers.wind.includes("any")) {
       const prefixMatch = spot.prefers.wind.some(w => dir.startsWith(w));
-      if (prefixMatch) { cond *= 1.1; reasons.push("风向(" + dir + ")适合此点"); }
-      else { cond *= 0.85; }
+      if (prefixMatch) { weatherMult *= 1.1; reasons.push("风向 " + dir + " 适合此点"); }
+      else { weatherMult *= 0.85; }
     }
     if (weather.precipitation && weather.precipitation > 2) {
-      cond *= 0.8; reasons.push("降雨 " + weather.precipitation.toFixed(1) + "mm");
+      weatherMult *= 0.8;
+      reasons.push("降雨 " + weather.precipitation.toFixed(1) + "mm");
     }
   }
 
   if (marine && marine.wave_height != null) {
     const wh = marine.wave_height;
     if (spot.type === "rock") {
-      if (wh < 1.2) { cond *= 1.1; reasons.push("涌浪小 " + wh.toFixed(1) + "m"); }
-      else if (wh < 2) { cond *= 0.9; reasons.push("涌浪中 " + wh.toFixed(1) + "m"); }
-      else { cond *= 0.45; reasons.push("⚠️ 涌浪大 " + wh.toFixed(1) + "m 岩钓危险"); }
+      if (wh < 1.2) { weatherMult *= 1.1; reasons.push("涌浪小 " + wh.toFixed(1) + "m"); }
+      else if (wh < 2) { weatherMult *= 0.9; reasons.push("涌浪中 " + wh.toFixed(1) + "m"); }
+      else { weatherMult *= 0.45; reasons.push("⚠️ 涌浪大 " + wh.toFixed(1) + "m 岩钓危险"); }
     } else if (spot.type === "beach") {
-      if (wh < 1.5) cond *= 1.05;
-      else if (wh > 2.5) { cond *= 0.7; reasons.push("海滩浪大"); }
+      if (wh < 1.5) weatherMult *= 1.05;
+      else if (wh > 2.5) { weatherMult *= 0.7; reasons.push("海滩浪大"); }
     }
   }
 
-  // Time factor — dawn/dusk bonus
+  // ----- Tide factor -----
+  const tideInfo = tideFactorFor(spot, tide);
+  const tideMult = tideInfo.mult;
+  if (tideInfo.reason) reasons.push(tideInfo.reason);
+
+  // ----- Time factor (dawn/dusk bonus) -----
   const now = new Date();
   const hr = now.getHours();
-  let timeFactor = 1.0;
+  let timeMult = 1.0;
   if ((hr >= 5 && hr <= 8) || (hr >= 17 && hr <= 20)) {
-    timeFactor = 1.15;
-    reasons.push("晨昏黄金时段");
+    timeMult = 1.15;
+    reasons.push("晨昏黄金时段 Golden Hour");
   } else if (hr >= 22 || hr <= 4) {
-    timeFactor = 0.9;
+    timeMult = 0.9;
   }
 
-  const score = spot.baseScore * distFactor * cond * timeFactor;
+  // ----- Access factor (mode-dependent) -----
+  const access = (window.ACCESS_DATA && window.ACCESS_DATA[spot.id]) || null;
+  let accessMult = 1.0;
+  if (access && access.score) {
+    const [lo, hi] = modeCfg.accessRange;
+    accessMult = lerp(lo, hi, (access.score - 1) / 4);
+    if (mode === "family") {
+      reasons.push(`交通便利 ${"★".repeat(access.score)}${"☆".repeat(5 - access.score)}`);
+    }
+  } else if (mode === "family") {
+    // Unknown access in family mode: neutral
+    accessMult = 0.95;
+  }
+
+  const score = spot.baseScore * weatherMult * tideMult * timeMult * accessMult * distancePenalty;
   return { score, dist, reasons };
+}
+
+// Returns true if spot should be excluded under current mode's terrain filter.
+function isSpotFiltered(spot, mode) {
+  const modeCfg = SCORING_MODES[mode] || SCORING_MODES.fish;
+  if (!modeCfg.terrainFilter) return false;
+  const access = (window.ACCESS_DATA && window.ACCESS_DATA[spot.id]) || null;
+  if (!access) return false;  // unknown terrain: let through
+  return modeCfg.terrainFilter.includes(access.terrain);
 }
 
 function getAccess(spotId) {
@@ -160,6 +333,94 @@ function terrainLabel(t) {
     hard: "🟠 困难 · Hard",
     extreme: "🔴 极难 · Extreme"
   })[t] || "— 未评估";
+}
+
+// ---------- Rig recommendations ----------
+function levelLabel(l) {
+  return ({ beginner: "🟢 入门", intermediate: "🟡 进阶", advanced: "🔴 高级" })[l] || l;
+}
+
+function renderRigCard(rig) {
+  return `
+    <div class="rig-card">
+      <div class="rig-card-head">
+        <div>
+          <div class="rig-name">${escapeHtml(rig.name)}</div>
+          <div class="rig-name-en">${escapeHtml(rig.nameEn || "")}</div>
+        </div>
+        <div class="rig-level">${levelLabel(rig.level)}</div>
+      </div>
+      <div class="rig-grid">
+        <div><b>钓竿 Rod</b>${escapeHtml(rig.rod)}</div>
+        <div><b>渔轮 Reel</b>${escapeHtml(rig.reel)}</div>
+        <div><b>主线 Line</b>${escapeHtml(rig.line)}</div>
+        <div><b>前导 Leader</b>${escapeHtml(rig.leader)}</div>
+        <div><b>钓钩 Hook</b>${escapeHtml(rig.hook)}</div>
+        <div><b>饵料 Bait</b>${escapeHtml(rig.bait)}</div>
+      </div>
+      <div class="rig-technique">
+        <b>钓法 Technique</b>
+        <p>${escapeHtml(rig.technique)}</p>
+      </div>
+      <div class="rig-tip">💡 ${escapeHtml(rig.tip)}</div>
+    </div>
+  `;
+}
+
+function renderRigsForSpecies(spot, species) {
+  const db = window.RIGS_BY_SPECIES && window.RIGS_BY_SPECIES[species];
+  if (!db) {
+    return `<div class="rig-empty">该鱼种钓组数据整理中 · Rig data not yet available</div>`;
+  }
+  const cards = db.rigs.map(renderRigCard).join("");
+  const note = spot.rigNotes && spot.rigNotes[species];
+  const noteHtml = note ? `
+    <div class="rig-note">
+      <div class="rig-note-title">📌 本钓点经验补充 · Spot-specific Tip</div>
+      <div>${escapeHtml(note)}</div>
+    </div>
+  ` : "";
+  return cards + noteHtml;
+}
+
+function renderRigsSection(spot) {
+  const availableSpecies = spot.species.filter(sp => window.RIGS_BY_SPECIES && window.RIGS_BY_SPECIES[sp]);
+  if (!availableSpecies.length) {
+    return `
+      <section>
+        <h4>推荐钓组 · Recommended Rigs</h4>
+        <div class="rig-empty">该钓点的目标鱼钓组数据整理中</div>
+      </section>`;
+  }
+  const firstSpecies = availableSpecies[0];
+  const tabs = availableSpecies.map((sp, i) => {
+    const db = window.RIGS_BY_SPECIES[sp];
+    return `<button class="rig-tab${i === 0 ? ' active' : ''}" data-species="${sp}">
+      ${db.icon || "🐟"} ${escapeHtml(db.nameCn)} <span class="rig-tab-en">${sp}</span>
+    </button>`;
+  }).join("");
+  return `
+    <section>
+      <h4>推荐钓组 · Recommended Rigs</h4>
+      <div class="rig-tabs">${tabs}</div>
+      <div class="rig-container" id="rigContainer">
+        ${renderRigsForSpecies(spot, firstSpecies)}
+      </div>
+    </section>
+  `;
+}
+
+function bindRigTabs(spot) {
+  const tabs = document.querySelectorAll(".rig-tab");
+  const container = document.getElementById("rigContainer");
+  if (!tabs.length || !container) return;
+  tabs.forEach(tab => {
+    tab.addEventListener("click", () => {
+      tabs.forEach(t => t.classList.remove("active"));
+      tab.classList.add("active");
+      container.innerHTML = renderRigsForSpecies(spot, tab.dataset.species);
+    });
+  });
 }
 
 function renderAccessSection(spotId) {
@@ -215,22 +476,35 @@ function render() {
       return a && a.score >= accessFilter;
     });
   }
+  // Mode-based terrain filter (family mode hides hard/extreme)
+  spots = spots.filter(s => !isSpotFiltered(s, currentMode));
 
   const scored = spots.map(s => {
-    const r = scoreSpot(s, userLatLng, currentWeather?.weather, currentWeather?.marine);
+    const r = scoreSpot(
+      s, userLatLng,
+      currentWeather?.weather, currentWeather?.marine, currentWeather?.tide,
+      currentMode
+    );
     return { spot: s, ...r };
   });
-  if (userLatLng) scored.sort((a,b) => {
-    if (a.dist > radius && b.dist > radius) return a.score < b.score ? 1 : -1;
-    if (a.dist > radius) return 1;
-    if (b.dist > radius) return -1;
-    return b.score - a.score;
-  });
-  else scored.sort((a,b) => b.score - a.score);
+
+  // Fish mode: ignore radius entirely. Near/Family: apply radius.
+  if (currentMode !== "fish" && userLatLng) {
+    scored.sort((a,b) => {
+      if (a.dist > radius && b.dist > radius) return b.score - a.score;
+      if (a.dist > radius) return 1;
+      if (b.dist > radius) return -1;
+      return b.score - a.score;
+    });
+  } else {
+    scored.sort((a,b) => b.score - a.score);
+  }
 
   sortedSpots = scored;
 
-  const visible = userLatLng ? scored.filter(s => s.dist <= radius) : scored;
+  const visible = (currentMode !== "fish" && userLatLng)
+    ? scored.filter(s => s.dist <= radius)
+    : scored;
   const toShow = visible.length ? visible : scored.slice(0, 6);
 
   listEl.innerHTML = "";
@@ -308,6 +582,8 @@ function showDetail(id) {
         <ul>${s.techniques.map(t => `<li>${t}</li>`).join("")}</ul>
       </section>
 
+      ${renderRigsSection(s)}
+
       <section>
         <h4>现场提示 · Local Tips</h4>
         <p>${s.tipsCn}</p>
@@ -343,8 +619,29 @@ function showDetail(id) {
   };
   // bind review form
   bindReviewForm(s.id);
+  // bind rig tabs
+  bindRigTabs(s);
   document.getElementById("detail").classList.remove("hidden");
   map.flyTo([s.lat, s.lng], 14, { duration: 0.8 });
+}
+
+function tideDisplay(tide) {
+  if (!tide) return null;
+  const arrow = tide.trend === "rising" ? "↗" : tide.trend === "falling" ? "↘" : "⏸";
+  const phaseLabel = ({
+    "rising": "涨潮中",
+    "falling": "退潮中",
+    "high-slack": "高潮平潮",
+    "low-slack": "低潮平潮",
+    "slack": "平潮"
+  })[tide.phase] || tide.phase;
+  let suffix = "";
+  if (tide.trend === "rising" && tide.hoursToHigh != null) {
+    suffix = ` · ${tide.hoursToHigh.toFixed(1)}h 后高潮`;
+  } else if (tide.trend === "falling" && tide.hoursToLow != null) {
+    suffix = ` · ${tide.hoursToLow.toFixed(1)}h 后低潮`;
+  }
+  return `${arrow} ${phaseLabel}${suffix}`;
 }
 
 function showWeather() {
@@ -352,13 +649,16 @@ function showWeather() {
   if (!currentWeather || !currentWeather.weather) { box.classList.add("hidden"); return; }
   const w = currentWeather.weather;
   const m = currentWeather.marine;
+  const t = currentWeather.tide;
   const content = document.getElementById("weatherContent");
+  const tideText = tideDisplay(t);
   content.innerHTML = `
     <div class="row"><span>气温 Temp</span><span>${w.temperature_2m?.toFixed(1) ?? "-"} °C</span></div>
     <div class="row"><span>风 Wind</span><span>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</span></div>
     <div class="row"><span>降雨 Rain</span><span>${w.precipitation?.toFixed(1) ?? 0} mm</span></div>
     ${m ? `<div class="row"><span>浪高 Wave</span><span>${m.wave_height?.toFixed(1) ?? "-"} m</span></div>` : ""}
     ${m ? `<div class="row"><span>周期 Period</span><span>${m.wave_period?.toFixed(0) ?? "-"} s</span></div>` : ""}
+    ${tideText ? `<div class="row tide-row"><span>潮汐 Tide</span><span>${tideText}</span></div>` : ""}
   `;
   box.classList.remove("hidden");
 }
@@ -410,11 +710,12 @@ async function locateUser() {
 
 async function loadConditions() {
   if (!userLatLng) return;
-  const [weather, marine] = await Promise.all([
+  const [weather, marine, tide] = await Promise.all([
     fetchWeather(userLatLng[0], userLatLng[1]),
-    fetchMarine(userLatLng[0], userLatLng[1])
+    fetchMarine(userLatLng[0], userLatLng[1]),
+    fetchTide(userLatLng[0], userLatLng[1])
   ]);
-  currentWeather = { weather, marine };
+  currentWeather = { weather, marine, tide };
   showWeather();
 }
 
@@ -529,6 +830,17 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("radiusSel").addEventListener("change", render);
   document.getElementById("speciesSel").addEventListener("change", render);
   document.getElementById("accessSel").addEventListener("change", render);
+  // Mode selector
+  document.querySelectorAll(".mode-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      currentMode = btn.dataset.mode;
+      document.querySelectorAll(".mode-btn").forEach(b => b.classList.toggle("active", b === btn));
+      // Hide radius selector in fish mode since distance is ignored
+      const radiusLabel = document.getElementById("radiusSel")?.closest("label");
+      if (radiusLabel) radiusLabel.style.opacity = currentMode === "fish" ? "0.4" : "1";
+      render();
+    });
+  });
   document.getElementById("detail").addEventListener("click", e => {
     if (e.target.id === "detail") document.getElementById("detail").classList.add("hidden");
   });

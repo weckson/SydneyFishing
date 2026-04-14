@@ -15,7 +15,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live yakkas for kingfish", "Berley + bread for bream", "Squid jigs along kelp edges"],
     tips: "Popular land-based game spot — kingfish in summer, drummer in winter. Slippery rocks: wear cleated boots and watch the swell.",
     tipsCn: "著名岸钓游钓点：夏季黄尾鰤，冬季黑毛。岩石湿滑，请穿防滑钉鞋并留意浪涌。",
-    prefers: { calm: true, wind: ["NE", "N", "W", "SW"] }
+    prefers: { calm: true, wind: ["NE", "N", "W", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "本点活饵效果 >> 铁板。早晨 6-7 点涨潮前 1 小时最旺。气球建议 15cm 大号抗风。",
+      "Drummer": "冬季用面包+海鞘 berley 效果显著，北侧岩缝 30cm 离底最佳。"
+    }
   },
   {
     id: "clovelly",
@@ -45,7 +50,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Pilchards on gang hooks for tailor", "Metal slugs for salmon", "Live bait for jewfish after dark"],
     tips: "Walk out on low tide only. Exposed to southerly swell — do NOT fish in big seas.",
     tipsCn: "仅可在低潮步行前往；受南涌影响大，涌浪大时严禁下竿。",
-    prefers: { calm: false, wind: ["W", "NW"] }
+    prefers: { calm: false, wind: ["W", "NW"] },
+    preferredTide: "falling",
+    rigNotes: {
+      "Jewfish": "夜钓换潮期 ±1h 是金窗口。活乌头 (live mullet) 效果压倒性，leader 用 80lb 防砂石磨损。",
+      "Tailor": "晨昏炸水用 Gang Hook + 整条 pilchard 远投沟外。"
+    }
   },
   {
     id: "bradleys-head",
@@ -60,7 +70,11 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live squid or yakkas for kingfish", "Berley for bream and trevally", "Squid jigs over weed"],
     tips: "Classic harbour kingfish spot. Deep water right off the rocks.",
     tipsCn: "经典港内钓黄尾点，岸边即深水区。",
-    prefers: { calm: true, wind: ["N", "NW", "W", "SW"] }
+    prefers: { calm: true, wind: ["N", "NW", "W", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "港内活饵走流钓法为主，leader 50-60lb 足够。用小号 yakka 比大号更有效。"
+    }
   },
   {
     id: "the-spit",
@@ -105,7 +119,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Light running sinker rigs", "Beach worms for whiting", "Pilchards for salmon schools"],
     tips: "Sheltered from southerlies — fishable when ocean beaches are blown out.",
     tipsCn: "避南风，南风天海滩刮不下竿时此处仍可作钓。",
-    prefers: { calm: true, wind: ["S", "SW", "SE"] }
+    prefers: { calm: true, wind: ["S", "SW", "SE"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Whiting": "涨潮前 2h 开始，走铅沙底，海虫或钳虾饵。沙梭在沙坝背后的深沟。",
+      "Flathead": "低潮时找沟，涨潮时进沟，软虫 1/8oz 配 3 寸 shad 最稳。"
+    }
   },
   {
     id: "balmoral",
@@ -150,7 +169,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Cunjevoi float rigs", "Metal slugs for salmon", "Red crab for groper"],
     tips: "Exposed to southerly swell — check wave forecast before fishing.",
     tipsCn: "暴露南涌，下竿前务必查看浪高预报。",
-    prefers: { calm: false, wind: ["W", "NW", "N"] }
+    prefers: { calm: false, wind: ["W", "NW", "N"] },
+    preferredTide: "high",
+    rigNotes: {
+      "Drummer": "冬季绝佳黑毛点。海鞘浮漂钓离底 20-30cm；涌浪大的日子鱼最活跃但要严查安全。",
+      "Groper": "红蟹沉底最有效；注意蓝色雄性隆头鱼受保护必须放流。"
+    }
   },
   {
     id: "manly-wharf",
@@ -180,7 +204,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live bait drift", "Squid jigs over weed beds"],
     tips: "Famous land-based kingfish haunt. Fights rods into pylons — use heavy leader.",
     tipsCn: "著名岸钓黄尾点；鱼易缠桩，使用粗碳线。",
-    prefers: { calm: true, wind: ["N", "NW", "W", "SW"] }
+    prefers: { calm: true, wind: ["N", "NW", "W", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "码头桩缠线专业户，leader 必须 80-100lb。活饵建议吊在桩间 1-2m 深，距离桩 0.5m 外。",
+      "Squid": "晚上灯下用 3.5# Egi 粉色/夜光效果最稳。"
+    }
   },
   {
     id: "clontarf",
@@ -225,7 +254,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live squid/yakkas for kings", "Metal slugs at sunrise for bonito"],
     tips: "Serious land-based game platform. Heavy gear, cleats, and a buddy — never solo in swell.",
     tipsCn: "岸钓大物平台；重装备+钉鞋+同伴，严禁独自在涌浪中作钓。",
-    prefers: { calm: true, wind: ["W", "NW", "N"] }
+    prefers: { calm: true, wind: ["W", "NW", "N"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "北角需要真正重竿，leader 80lb 起步。鱼咬后必须立即起竿拉离礁缝，任何犹豫都会缠线断线。",
+      "Bonito": "夏季 5-7AM 铁板专场，看到鲣鱼群炸水立刻抛进去，收线越快越好。"
+    }
   },
   {
     id: "camp-cove",
@@ -255,7 +289,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Cunjevoi for drummer", "Red crab for groper", "Live slimies for kings"],
     tips: "NOTE: EPA fishing ban on recreational harvest zones near Malabar — check current rules before keeping fish.",
     tipsCn: "注意：马拉巴附近有 EPA 禁捕区，食用前请查询最新规定。",
-    prefers: { calm: false, wind: ["W", "NW"] }
+    prefers: { calm: false, wind: ["W", "NW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Drummer": "北侧岩缝用海鞘+面包 berley，冬季高潮段最旺。",
+      "Groper": "红蟹 + 重沉底；蓝色雄性必须放流。"
+    }
   },
   {
     id: "gunnamatta",
@@ -285,7 +324,11 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live mullet for jewfish", "Soft plastics on deep edges"],
     tips: "Famous for big jewfish. Bring heavy tackle and patience.",
     tipsCn: "以大石首鱼闻名；粗线大钩，耐心等候。",
-    prefers: { calm: true, wind: ["any"] }
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "change",
+    rigNotes: {
+      "Jewfish": "换潮 ±2h 是 Brooklyn 的金时段。活乌头必须是钓点附近捞的，买的冷冻货差远了。头灯务必蓝/红光。"
+    }
   },
   {
     id: "cape-solander",
@@ -897,7 +940,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live bait on balloon/float", "Metal slugs at sunrise", "Ganged pilchards for tailor"],
     tips: "Legendary land-based king platform. Deep water straight off the rocks. NEVER fish solo or in swell over 2m.",
     tipsCn: "传奇岸钓黄尾平台，岸边直接深水。涌浪 >2m 严禁，切勿单人作钓。",
-    prefers: { calm: true, wind: ["W", "NW", "SW"] }
+    prefers: { calm: true, wind: ["W", "NW", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "Hornby 传奇点要求顶配：PE6+80lb leader，章鱼钩 8/0。鱼咬后 3 秒内必须把头拉离礁石，慢半秒就缠线断掉。活鱿 >> 活 yakka。",
+      "Bonito": "夏季清晨只有 30 分钟黄金窗口，炸水开始就全力抛铁板，动作越快越好。"
+    }
   },
   {
     id: "the-gap-safe", name: "Dunbar Head (南角安全段)", nameCn: "邓巴角",
@@ -967,7 +1015,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live yakkas", "Cunjevoi for drummer", "Red crab for groper"],
     tips: "One of the most reliable east-coast land-based king spots.",
     tipsCn: "东海岸最稳定岸钓黄尾点之一。",
-    prefers: { calm: true, wind: ["W", "NW", "SW"] }
+    prefers: { calm: true, wind: ["W", "NW", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "比 Hornby 平缓，但仍需 PE4-5 + 60-80lb leader。清晨活饵+气球漂钓最稳，连续 3 个早上都可能开口。",
+      "Drummer": "冬季高潮用海鞘，右侧岩缝是金窝。"
+    }
   },
   {
     id: "lurline-bay", name: "Lurline Bay", nameCn: "卢尔琳湾",
@@ -987,7 +1040,11 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live squid/mullet", "Heavy running sinker rigs"],
     tips: "Legendary deep ledge at Maroubra. Heavy tackle and a headlamp.",
     tipsCn: "马鲁巴著名深岩台，粗线重钩+头灯。",
-    prefers: { calm: false, wind: ["W"] }
+    prefers: { calm: false, wind: ["W"] },
+    preferredTide: "change",
+    rigNotes: {
+      "Jewfish": "夜钓专场。活乌头或活 tailor 头部最优。走铅 8-10oz，leader 80lb+ 抗石缝磨损。设好拖曳、竿铃+夹子。"
+    }
   },
   {
     id: "magic-point", name: "Magic Point, Maroubra", nameCn: "魔法角 · 马鲁巴",
@@ -997,7 +1054,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Metal slugs", "Live bait"],
     tips: "Iconic headland with grey nurse sharks below — catch & release encouraged.",
     tipsCn: "标志性岬角，水下有灰护士鲨，鼓励放流。",
-    prefers: { calm: true, wind: ["W", "NW"] }
+    prefers: { calm: true, wind: ["W", "NW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Bonito": "夏季 5-8AM 鲣鱼专场；铁板 40g 银蓝色最有效。",
+      "Kingfish": "活饵+气球漂钓，leader 60lb；水下有灰护士鲨，尽量快收避免压力"
+    }
   },
   {
     id: "boora-point", name: "Boora Point, Malabar", nameCn: "布拉角 · 马拉巴",
@@ -1017,7 +1079,12 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live yakkas/squid", "Metal slugs", "Red crab"],
     tips: "Walk across the land bridge at low tide. Long walk but worth it.",
     tipsCn: "低潮通过陆桥进入，路程长但值得。",
-    prefers: { calm: true, wind: ["W", "NW", "SW"] }
+    prefers: { calm: true, wind: ["W", "NW", "SW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "一趟路程负重大，建议只带精简的 PE5 + 80lb leader 一套。活饵在途中用硬桶+氧气泵保活。",
+      "Drummer": "冬季工作日人少，海鞘浮漂在北侧平台最稳。"
+    }
   },
   {
     id: "henry-head", name: "Henry Head", nameCn: "亨利角",
@@ -1059,7 +1126,11 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live yakkas", "Metal slugs", "Ganged pilchards"],
     tips: "Near Cook's landing place. Short walk, deep water close in.",
     tipsCn: "库克登陆地附近，步程短岸边即深水。",
-    prefers: { calm: true, wind: ["W", "NW"] }
+    prefers: { calm: true, wind: ["W", "NW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "Kurnell 半岛最易达的 LBG 点，适合 LBG 初级玩家练手。活饵 + 气球漂钓最稳；leader 60lb 足够。"
+    }
   },
   {
     id: "cape-baily", name: "Cape Baily", nameCn: "贝利角",
@@ -1151,7 +1222,11 @@ window.SYDNEY_SPOTS = [
     techniques: ["Live squid/yakkas", "Metal slugs"],
     tips: "Most northern Sydney headland. Long walk to lighthouse platforms.",
     tipsCn: "悉尼最北岬角，到灯塔平台路程较长。",
-    prefers: { calm: true, wind: ["W", "NW"] }
+    prefers: { calm: true, wind: ["W", "NW"] },
+    preferredTide: "rising",
+    rigNotes: {
+      "Kingfish": "走路远，装备精简为王：一根 PE5 + 80lb leader 一套，活饵桶。气球漂钓优先，因为位置高。"
+    }
   },
   {
     id: "north-avalon", name: "North Avalon Headland", nameCn: "北阿瓦隆岬角",

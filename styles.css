@@ -299,6 +299,160 @@ html, body {
   border-radius: 10px;
 }
 
+/* ---------- Mode selector ---------- */
+.mode-selector {
+  display: flex; gap: 6px;
+  padding: 4px;
+  background: linear-gradient(135deg, #e8f1f9, #f1f8fc);
+  border-radius: 999px;
+  margin-bottom: 12px;
+  border: 1px solid var(--line);
+}
+.mode-btn {
+  flex: 1; padding: 8px 10px;
+  background: transparent; border: 0;
+  border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+  color: var(--muted); cursor: pointer;
+  font-family: inherit;
+  transition: all .18s ease;
+  white-space: nowrap;
+}
+.mode-btn:hover { color: var(--ocean-2); }
+.mode-btn.active {
+  background: linear-gradient(135deg, #ffb703, #fb8500);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(251, 133, 0, .35), inset 0 1px 0 rgba(255,255,255,.4);
+}
+
+/* ---------- Tide indicator in weather box ---------- */
+.weather-box .row.tide-row {
+  background: linear-gradient(90deg, rgba(6, 182, 212, .08), transparent);
+  padding-left: 6px;
+  margin: 0 -6px;
+  border-radius: 6px;
+}
+.weather-box .row.tide-row span:last-child {
+  color: var(--teal);
+}
+
+/* ---------- Rig recommendations ---------- */
+.rig-tabs {
+  display: flex; gap: 6px; flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.rig-tab {
+  background: #f1f8fc;
+  border: 1px solid var(--line);
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-size: 12px; font-weight: 600;
+  color: var(--ocean-2); cursor: pointer;
+  font-family: inherit;
+  transition: all .15s;
+}
+.rig-tab:hover { border-color: var(--ocean-3); }
+.rig-tab.active {
+  background: linear-gradient(135deg, var(--ocean-3), var(--ocean-2));
+  color: #fff;
+  border-color: var(--ocean-2);
+  box-shadow: 0 3px 10px rgba(1, 73, 124, .3);
+}
+.rig-tab .rig-tab-en {
+  opacity: .65; font-size: 10px; font-weight: 500;
+  margin-left: 3px;
+}
+
+.rig-container { display: flex; flex-direction: column; gap: 10px; }
+
+.rig-card {
+  background: #f8fbfd;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px 16px;
+  position: relative;
+}
+.rig-card-head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  gap: 10px; margin-bottom: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+}
+.rig-name { font-size: 14px; font-weight: 700; color: var(--ocean-2); }
+.rig-name-en { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.rig-level {
+  flex-shrink: 0;
+  font-size: 10.5px; font-weight: 700;
+  padding: 4px 9px; border-radius: 99px;
+  background: #fff; border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+.rig-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px;
+  margin-bottom: 12px;
+}
+.rig-grid > div { font-size: 12px; line-height: 1.5; color: var(--ink-2); }
+.rig-grid b {
+  display: block; font-size: 10px; font-weight: 700;
+  color: var(--ocean-3); margin-bottom: 1px;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+
+.rig-technique {
+  padding: 10px 12px;
+  background: #fff;
+  border-radius: 8px; border: 1px solid var(--line);
+  margin-bottom: 10px;
+}
+.rig-technique b {
+  display: block; font-size: 10px; font-weight: 700;
+  color: var(--ocean-3); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: .4px;
+}
+.rig-technique p {
+  font-size: 12.5px; line-height: 1.55; color: var(--ink-2); margin: 0;
+}
+
+.rig-tip {
+  padding: 8px 12px;
+  background: linear-gradient(135deg, #fff8e0, #fffbea);
+  border-left: 3px solid var(--gold);
+  border-radius: 0 8px 8px 0;
+  font-size: 12px; line-height: 1.5;
+  color: #6b4800;
+}
+
+.rig-note {
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, #fff3d0, #ffe8a0);
+  border: 1px solid #ffd98a;
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(255, 183, 3, .15);
+}
+.rig-note-title {
+  font-size: 11px; font-weight: 700;
+  color: #8a5a00;
+  margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: .5px;
+}
+.rig-note > div:last-child {
+  font-size: 13px; line-height: 1.55;
+  color: #3d2600;
+}
+
+.rig-empty {
+  padding: 14px; text-align: center;
+  color: var(--muted); font-size: 12px; font-style: italic;
+  background: #f5f8fb; border: 1px dashed #c7dcec;
+  border-radius: 10px;
+}
+
+@media (max-width: 520px) {
+  .rig-grid { grid-template-columns: 1fr; }
+}
+
 /* ---------- Layout ---------- */
 main {
   display: grid; grid-template-columns: 400px 1fr;
