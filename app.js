@@ -50,6 +50,7 @@ let mapCenterLatLng = null;   // Updated on map moveend, used as reference point
 let mapMoveTimer = null;      // Debounce timer for moveend
 let conditionsCenterLatLng = null;  // Last center used to fetch weather/tide conditions
 let radiusCircle = null;      // Leaflet circle visualizing current search radius around map center
+let sheetState = "collapsed"; // "collapsed" | "half" | "full" — mobile bottom sheet state
 
 function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
 
@@ -669,6 +670,7 @@ function render() {
   }
 
   updateReferenceIndicator();
+  updateSheetPeek();
 }
 
 function typeLabel(t) {
@@ -1128,9 +1130,114 @@ function bindReviewForm(spotId) {
   });
 }
 
+// ---------- Mobile bottom sheet ----------
+function setSheetState(state) {
+  sheetState = state;
+  const panel = document.getElementById("panel");
+  if (!panel) return;
+  panel.classList.remove("sheet-collapsed", "sheet-half", "sheet-full");
+  panel.classList.add("sheet-" + state);
+  // Reset any inline transform that touch drag may have set
+  panel.style.transform = "";
+  panel.style.transition = "";
+}
+
+// Update the collapsed peek content with the current top spot.
+function updateSheetPeek() {
+  const peek = document.getElementById("sheetPeek");
+  if (!peek) return;
+  const best = sortedSpots[0];
+  if (best) {
+    peek.innerHTML = `<span class="peek-badge">首选 ${toDisplayScore(best.score)}</span>${escapeHtml(best.spot.nameCn)}`;
+  } else {
+    peek.textContent = "上滑查看推荐钓点 · Swipe up";
+  }
+}
+
+// Bind tap + swipe handlers to the sheet handle. Used on mobile only.
+function bindSheetHandle() {
+  const handle = document.getElementById("sheetHandle");
+  const panel = document.getElementById("panel");
+  if (!handle || !panel) return;
+
+  let startY = 0;
+  let startX = 0;
+  let dragging = false;
+  let sheetStartPx = 0;
+
+  function currentTranslatePx() {
+    const h = window.innerHeight;
+    if (sheetState === "collapsed") return h - 78;
+    if (sheetState === "half") return h - h * 0.5;
+    if (sheetState === "full") return h * 0.08;
+    return h * 0.5;
+  }
+
+  function snapToNearest(finalPx) {
+    const h = window.innerHeight;
+    const options = {
+      collapsed: h - 78,
+      half: h - h * 0.5,
+      full: h * 0.08
+    };
+    let best = "half";
+    let minDiff = Infinity;
+    for (const [s, y] of Object.entries(options)) {
+      const d = Math.abs(y - finalPx);
+      if (d < minDiff) { minDiff = d; best = s; }
+    }
+    setSheetState(best);
+  }
+
+  handle.addEventListener("touchstart", e => {
+    if (e.touches.length !== 1) return;
+    startY = e.touches[0].clientY;
+    startX = e.touches[0].clientX;
+    dragging = true;
+    sheetStartPx = currentTranslatePx();
+    panel.style.transition = "none";
+  }, { passive: true });
+
+  handle.addEventListener("touchmove", e => {
+    if (!dragging) return;
+    const dy = e.touches[0].clientY - startY;
+    const newTrans = Math.max(window.innerHeight * 0.08, Math.min(window.innerHeight - 60, sheetStartPx + dy));
+    panel.style.transform = `translateY(${newTrans}px)`;
+  }, { passive: true });
+
+  handle.addEventListener("touchend", e => {
+    if (!dragging) return;
+    dragging = false;
+    const endY = e.changedTouches[0].clientY;
+    const endX = e.changedTouches[0].clientX;
+    const dy = endY - startY;
+    const dx = endX - startX;
+    // Tap detection: minimal movement
+    if (Math.abs(dy) < 8 && Math.abs(dx) < 8) {
+      const order = { collapsed: "half", half: "full", full: "collapsed" };
+      setSheetState(order[sheetState] || "half");
+      return;
+    }
+    // Drag release: snap to nearest state based on release position
+    const finalPx = sheetStartPx + dy;
+    snapToNearest(finalPx);
+  });
+
+  // Click fallback (for non-touch)
+  handle.addEventListener("click", (e) => {
+    // Only fire if touchend didn't already handle it
+    if (e.detail === 0) return;
+  });
+}
+
 document.addEventListener("DOMContentLoaded", () => {
   initMap();
   render();
+  bindSheetHandle();
+  // Initialize sheet state based on viewport. On desktop the class is inert; on mobile default to collapsed.
+  if (window.innerWidth <= 860) {
+    setSheetState("collapsed");
+  }
   // Kick off an initial conditions fetch using the map center so Prime Windows and tide
   // are available before the user even presses "locate me".
   loadConditionsAt(mapCenterLatLng).then(() => {

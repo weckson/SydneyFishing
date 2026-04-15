@@ -1798,5 +1798,561 @@ window.SYDNEY_SPOTS = [
     tipsCn: "基亚马南侧安静海滩。",
     prefers: { calm: true, wind: ["W"] },
     preferredTide: "rising"
+  },
+
+  // ==================== Sydney Harbour 港内补充 ====================
+  {
+    id: "lady-martins-beach", name: "Lady Martins Beach, Point Piper", nameCn: "马丁女士海滩 · 派珀角",
+    lat: -33.8700, lng: 151.2630, type: "harbour", baseScore: 68,
+    species: ["Bream", "Whiting", "Flathead", "Squid"],
+    best: "High tide flats.", bestCn: "高潮沙滩最佳。",
+    techniques: ["Nippers", "Unweighted prawns"],
+    tips: "Exclusive harbour pocket beach, quiet on weekdays.",
+    tipsCn: "高档住宅区内的小海滩，工作日极安静。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+  {
+    id: "milk-beach", name: "Milk Beach, Hermitage Foreshore", nameCn: "牛奶海滩 · 艾米特基岸线",
+    lat: -33.8680, lng: 151.2690, type: "harbour", baseScore: 71,
+    species: ["Bream", "Flathead", "Squid", "Trevally"],
+    best: "Dawn run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Scenic spot on Hermitage Foreshore Walk, rocks and small beach.",
+    tipsCn: "艾米特基步道上风景极美的岩礁+小海滩组合。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "hermitage-rocks", name: "Hermitage Foreshore Rocks", nameCn: "艾米特基岸线岩区",
+    lat: -33.8660, lng: 151.2720, type: "harbour", baseScore: 72,
+    species: ["Bream", "Squid", "Luderick"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Float rig", "Squid jigs"],
+    tips: "Walk-in only, no road access — reward is solitude.",
+    tipsCn: "仅步行可达，换来的是无人的安静。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "bottle-glass", name: "Bottle & Glass Rocks, Vaucluse", nameCn: "瓶与杯岩 · 沃克鲁斯",
+    lat: -33.8430, lng: 151.2790, type: "harbour", baseScore: 80,
+    species: ["Kingfish", "Squid", "Bream", "Trevally"],
+    best: "Dawn run-in with live bait.", bestCn: "清晨涨潮活饵最佳。",
+    techniques: ["Live yakkas", "Squid jigs over weed"],
+    tips: "Harbour kingfish haunt, near Watsons Bay.",
+    tipsCn: "华生湾附近的港内黄尾常客点。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "lady-bay", name: "Lady Bay Beach, South Head", nameCn: "女士湾 · 南角",
+    lat: -33.8360, lng: 151.2810, type: "harbour", baseScore: 74,
+    species: ["Bream", "Squid", "Trevally", "Whiting"],
+    best: "Run-in tide morning.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Prawns", "Squid jigs"],
+    tips: "Small harbour beach below South Head cliffs (clothing-optional).",
+    tipsCn: "南角悬崖下的小海滩（天体海滩），请注意礼仪。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "clifton-gardens", name: "Clifton Gardens Wharf", nameCn: "克利夫顿花园码头",
+    lat: -33.8360, lng: 151.2530, type: "harbour", baseScore: 74,
+    species: ["Bream", "Squid", "Flathead", "Whiting"],
+    best: "Evening squid + night bream.", bestCn: "傍晚鱿鱼 + 夜钓黑鲷最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Historic wharf with shark net, very family-friendly.",
+    tipsCn: "历史码头 + 防鲨网家庭海滩，极友好。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "athol-bay", name: "Athol Bay / Taronga Foreshore", nameCn: "阿托尔湾 · 塔隆加岸线",
+    lat: -33.8430, lng: 151.2470, type: "harbour", baseScore: 73,
+    species: ["Kingfish", "Squid", "Bream"],
+    best: "Dawn live bait.", bestCn: "清晨活饵最佳。",
+    techniques: ["Live yakkas", "Squid jigs"],
+    tips: "Short walk from Taronga ferry, less crowded than Bradleys.",
+    tipsCn: "塔隆加渡轮短步行可达，比 Bradleys 更少人。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "lavender-bay", name: "Lavender Bay", nameCn: "薰衣草湾",
+    lat: -33.8510, lng: 151.2040, type: "harbour", baseScore: 68,
+    species: ["Bream", "Squid", "Flathead"],
+    best: "Evening squid.", bestCn: "傍晚鱿鱼最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "North Sydney harbour pocket under Harbour Bridge view.",
+    tipsCn: "北悉尼港湾，正对悉尼大桥的景色。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "neutral-bay", name: "Kurraba Point, Neutral Bay", nameCn: "库拉巴角 · 中立湾",
+    lat: -33.8400, lng: 151.2210, type: "harbour", baseScore: 70,
+    species: ["Bream", "Kingfish", "Squid"],
+    best: "Run-in tide morning.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Live bait", "Squid jigs"],
+    tips: "Ferry-accessible via Kurraba Wharf F6, deep water close in.",
+    tipsCn: "F6 库拉巴渡轮可达，岸边深水。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "reef-beach", name: "Reef Beach, Dobroyd Head", nameCn: "礁石海滩 · 多布罗伊角",
+    lat: -33.8130, lng: 151.2640, type: "harbour", baseScore: 72,
+    species: ["Bream", "Squid", "Trevally", "Flathead"],
+    best: "Run-in tide dawn.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Walk-in via Dobroyd Head track, beautiful small harbour beach.",
+    tipsCn: "由多布罗伊头步道步入，美丽的小港湾海滩。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "grotto-point", name: "Grotto Point", nameCn: "洞穴角",
+    lat: -33.8060, lng: 151.2700, type: "harbour", baseScore: 78,
+    species: ["Kingfish", "Squid", "Bream", "Trevally"],
+    best: "Dawn live bait.", bestCn: "清晨活饵最佳。",
+    techniques: ["Live yakkas", "Squid jigs"],
+    tips: "Historic lighthouse point, quiet harbour kingfish spot.",
+    tipsCn: "历史灯塔角，安静的港内黄尾点。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "store-beach", name: "Store Beach, Manly", nameCn: "商店海滩 · 曼利",
+    lat: -33.8170, lng: 151.2930, type: "harbour", baseScore: 72,
+    species: ["Bream", "Squid", "Whiting", "Flathead"],
+    best: "Run-in tide high.", bestCn: "高涨潮最佳。",
+    techniques: ["Nippers", "Squid jigs"],
+    tips: "Boat-only access (kayak works). Pristine harbour beach.",
+    tipsCn: "仅船 / 皮划艇可达，未受污染的港内海滩。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+  {
+    id: "spring-cove", name: "Spring Cove, Manly", nameCn: "泉湾 · 曼利",
+    lat: -33.8180, lng: 151.2950, type: "harbour", baseScore: 71,
+    species: ["Bream", "Squid", "Flathead"],
+    best: "Dawn run-in.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Next to Store Beach, similar boat-in access.",
+    tipsCn: "紧邻 Store Beach，同样船入。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+
+  // ==================== Eastern Suburbs 补充 ====================
+  {
+    id: "marks-park", name: "Mark's Park, Tamarama", nameCn: "马克斯公园 · 塔玛拉玛",
+    lat: -33.9010, lng: 151.2710, type: "rock", baseScore: 73,
+    species: ["Bream", "Drummer", "Luderick"],
+    best: "Incoming tide morning.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Float rig", "Light bream setups"],
+    tips: "On the Bondi-Bronte coastal walk, quieter ledges.",
+    tipsCn: "邦迪-布朗特海岸步道中段，较安静的岩台。",
+    prefers: { calm: true, wind: ["W", "SW"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "mackenzies-bay", name: "MacKenzies Bay (disappearing beach)", nameCn: "麦肯齐湾 · 隐现海滩",
+    lat: -33.8980, lng: 151.2750, type: "rock", baseScore: 70,
+    species: ["Bream", "Luderick", "Drummer"],
+    best: "Morning high tide.", bestCn: "清晨高潮最佳。",
+    techniques: ["Float rig", "Light bait"],
+    tips: "Sandy beach appears only some years — rocks always fishable.",
+    tipsCn: "沙滩只在某些年份出现，岩礁全年可钓。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "high"
+  },
+  {
+    id: "coogee-bullnose", name: "Bullnose, North Coogee", nameCn: "牛鼻岩 · 库吉北",
+    lat: -33.9160, lng: 151.2615, type: "rock", baseScore: 78,
+    species: ["Kingfish", "Drummer", "Bream", "Groper"],
+    best: "Dawn live bait.", bestCn: "清晨活饵最佳。",
+    techniques: ["Live yakkas", "Red crab for groper"],
+    tips: "The prominent rock nose north of Coogee Beach, serious LBG.",
+    tipsCn: "库吉海滩北端的岩鼻，严肃 LBG 点位。",
+    prefers: { calm: true, wind: ["W", "NW"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "waverley-cliff", name: "Waverley Cliff (lower ledges)", nameCn: "韦弗利悬崖 · 下岩台",
+    lat: -33.9080, lng: 151.2670, type: "rock", baseScore: 74,
+    species: ["Drummer", "Bream", "Groper", "Luderick"],
+    best: "Winter drummer high tide.", bestCn: "冬季高潮钓黑毛最佳。",
+    techniques: ["Cunjevoi float", "Red crab"],
+    tips: "Access only the safe lower ledges. NSW mandatory lifejacket zone.",
+    tipsCn: "仅下部安全岩台可钓，NSW 强制救生衣区。",
+    prefers: { calm: false, wind: ["W"] },
+    preferredTide: "high"
+  },
+
+  // ==================== Royal National Park ====================
+  {
+    id: "marley-beach", name: "Marley Beach, Royal NP", nameCn: "马利海滩 · 皇家国家公园",
+    lat: -34.1130, lng: 151.1530, type: "beach", baseScore: 77,
+    species: ["Salmon", "Tailor", "Jewfish", "Bream"],
+    best: "Dawn gutters.", bestCn: "清晨冲沟最佳。",
+    techniques: ["Pilchards gang hooks", "Beach worms"],
+    tips: "Wild isolated beach, 1h walk from Bundeena. Often you're alone.",
+    tipsCn: "邦德纳出发步行 1 小时的野滩，常常整片海滩只有你。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "wattamolla", name: "Wattamolla, Royal NP", nameCn: "瓦塔莫拉 · 皇家国家公园",
+    lat: -34.1380, lng: 151.1210, type: "beach", baseScore: 76,
+    species: ["Salmon", "Tailor", "Bream", "Drummer"],
+    best: "Dawn ocean side.", bestCn: "清晨外海侧最佳。",
+    techniques: ["Metals", "Pilchards"],
+    tips: "Car-accessible RoyalNP spot with lagoon + beach + rocks.",
+    tipsCn: "车可达的皇家国家公园点，有潟湖+海滩+岩礁组合。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "garie-beach", name: "Garie Beach, Royal NP", nameCn: "加里海滩 · 皇家国家公园",
+    lat: -34.1750, lng: 151.0630, type: "beach", baseScore: 78,
+    species: ["Salmon", "Tailor", "Jewfish", "Bream"],
+    best: "Dawn/dusk gutters.", bestCn: "晨昏冲沟最佳。",
+    techniques: ["Pilchards", "Live bait"],
+    tips: "Car access + long sandy beach. One of Royal NP's best-known beaches.",
+    tipsCn: "车可达 + 长沙滩，皇家国家公园最知名海滩之一。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "horderns-beach", name: "Horderns Beach, Bundeena", nameCn: "霍尔顿斯海滩 · 邦德纳",
+    lat: -34.0840, lng: 151.1560, type: "harbour", baseScore: 70,
+    species: ["Flathead", "Whiting", "Bream"],
+    best: "High tide flats.", bestCn: "高潮沙滩最佳。",
+    techniques: ["Nippers", "Beach worms"],
+    tips: "Port Hacking calm bay, family friendly.",
+    tipsCn: "霍金港内平静湾，家庭友好。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+
+  // ==================== Cronulla 补充 ====================
+  {
+    id: "oak-park", name: "Oak Park, Cronulla", nameCn: "橡树公园 · 克罗努拉",
+    lat: -34.0680, lng: 151.1700, type: "rock", baseScore: 76,
+    species: ["Bream", "Drummer", "Luderick", "Tailor"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Float rig", "Cunjevoi"],
+    tips: "Park + ocean pool + gentle rock platform combo.",
+    tipsCn: "公园+海水泳池+平缓岩台组合。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "shelly-beach-cronulla", name: "Shelly Beach, Cronulla", nameCn: "贝壳海滩 · 克罗努拉",
+    lat: -34.0620, lng: 151.1680, type: "beach", baseScore: 69,
+    species: ["Whiting", "Bream", "Flathead"],
+    best: "High tide.", bestCn: "高潮最佳。",
+    techniques: ["Nippers", "Beach worms"],
+    tips: "Small sheltered beach, family-friendly.",
+    tipsCn: "小而避风的家庭海滩。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+  {
+    id: "salmon-haul", name: "Salmon Haul Reserve, Cronulla", nameCn: "捕鲑保留地 · 克罗努拉",
+    lat: -34.0790, lng: 151.1590, type: "estuary",
+    baseScore: 76,
+    species: ["Tailor", "Flathead", "Bream", "Jewfish"],
+    best: "Run-out tide evening.", bestCn: "傍晚退潮最佳。",
+    techniques: ["Soft plastics", "Live bait"],
+    tips: "Port Hacking southern shore, historic salmon netting grounds.",
+    tipsCn: "霍金港南岸，历史上是捕鲑场。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "falling"
+  },
+  {
+    id: "elouera-beach", name: "Elouera Beach", nameCn: "艾露拉海滩",
+    lat: -34.0510, lng: 151.1690, type: "beach", baseScore: 75,
+    species: ["Salmon", "Tailor", "Whiting", "Jewfish"],
+    best: "Dawn/dusk gutters.", bestCn: "晨昏冲沟最佳。",
+    techniques: ["Pilchards gangs", "Beach worms"],
+    tips: "Part of Bate Bay, between Wanda and North Cronulla.",
+    tipsCn: "Bate Bay 一部分，在 Wanda 和 North Cronulla 之间。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+
+  // ==================== Northern Beaches 补充 ====================
+  {
+    id: "shelly-beach-manly", name: "Shelly Beach, Manly", nameCn: "贝壳海滩 · 曼利",
+    lat: -33.8020, lng: 151.2940, type: "harbour", baseScore: 75,
+    species: ["Bream", "Whiting", "Squid", "Groper"],
+    best: "Morning high tide.", bestCn: "清晨高潮最佳。",
+    techniques: ["Squid jigs", "Light bream rigs"],
+    tips: "Cabbage Tree Bay Aquatic Reserve — no-take zone. Catch & release only.",
+    tipsCn: "Cabbage Tree Bay 水生保护区，禁捕区，仅可钓放。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+  {
+    id: "fairy-bower", name: "Fairy Bower, Manly", nameCn: "仙女亭 · 曼利",
+    lat: -33.8010, lng: 151.2920, type: "rock", baseScore: 72,
+    species: ["Bream", "Drummer", "Luderick"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Light float rigs"],
+    tips: "Historic ocean pool rocks. NOTE: part of Cabbage Tree Bay aquatic reserve — check no-take zones.",
+    tipsCn: "历史海水泳池旁；注意 Cabbage Tree Bay 保护区禁捕范围。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "south-narrabeen", name: "South Narrabeen Beach", nameCn: "南纳拉宾海滩",
+    lat: -33.7150, lng: 151.3010, type: "beach", baseScore: 74,
+    species: ["Salmon", "Tailor", "Whiting", "Bream"],
+    best: "Dawn gutters.", bestCn: "清晨冲沟最佳。",
+    techniques: ["Pilchards", "Beach worms"],
+    tips: "Quieter southern end of Narrabeen Beach.",
+    tipsCn: "纳拉宾海滩南端，较安静。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "mona-vale-beach", name: "Mona Vale Beach", nameCn: "莫纳谷海滩",
+    lat: -33.6780, lng: 151.3120, type: "beach", baseScore: 73,
+    species: ["Salmon", "Tailor", "Whiting"],
+    best: "Dawn gutters.", bestCn: "清晨冲沟最佳。",
+    techniques: ["Pilchards", "Beach worms"],
+    tips: "Long family-friendly beach, easy access.",
+    tipsCn: "长沙滩家庭友好，易达。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "newport-beach", name: "Newport Beach", nameCn: "纽波特海滩",
+    lat: -33.6540, lng: 151.3220, type: "beach", baseScore: 72,
+    species: ["Salmon", "Tailor", "Whiting", "Jewfish"],
+    best: "Dawn/dusk, night for jewfish.", bestCn: "晨昏/夜钓石首鱼。",
+    techniques: ["Pilchards", "Live squid"],
+    tips: "Good gutter formation after storms.",
+    tipsCn: "风暴后冲沟形态良好。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "careel-bay", name: "Careel Bay, Pittwater", nameCn: "卡里尔湾 · 皮特沃特",
+    lat: -33.6260, lng: 151.3180, type: "estuary", baseScore: 71,
+    species: ["Flathead", "Bream", "Whiting", "Squid"],
+    best: "Run-in tide early.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Nippers", "Soft plastics", "Squid jigs"],
+    tips: "Sheltered Pittwater inlet, mangroves + sand flats.",
+    tipsCn: "皮特沃特避风湾，红树林+沙滩。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "basin-beach-pittwater", name: "The Basin, Pittwater", nameCn: "水盆海滩 · 皮特沃特",
+    lat: -33.6150, lng: 151.2820, type: "harbour", baseScore: 74,
+    species: ["Bream", "Whiting", "Flathead", "Squid"],
+    best: "Run-in tide.", bestCn: "涨潮最佳。",
+    techniques: ["Nippers", "Soft plastics"],
+    tips: "Boat or ferry access only, Ku-ring-gai NP camping spot.",
+    tipsCn: "仅船或渡轮可达，库灵盖国家公园营地。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "mackerel-beach", name: "Great Mackerel Beach", nameCn: "大马鲛海滩",
+    lat: -33.5950, lng: 151.2760, type: "harbour", baseScore: 75,
+    species: ["Flathead", "Whiting", "Bream", "Kingfish"],
+    best: "High tide.", bestCn: "高潮最佳。",
+    techniques: ["Soft plastics", "Live bait"],
+    tips: "Ferry from Palm Beach to this remote Pittwater village.",
+    tipsCn: "从棕榈海滩乘渡轮到这个偏远的皮特沃特村庄。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "high"
+  },
+  {
+    id: "dee-why-lagoon", name: "Dee Why Lagoon Entrance", nameCn: "迪威湖入口",
+    lat: -33.7520, lng: 151.2990, type: "estuary", baseScore: 69,
+    species: ["Flathead", "Bream", "Whiting"],
+    best: "Run-out tide.", bestCn: "退潮最佳。",
+    techniques: ["Soft plastics", "Nippers"],
+    tips: "Small lagoon mouth, opens to sea after storms.",
+    tipsCn: "小型湖口，风暴后开口入海。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "falling"
+  },
+  {
+    id: "fishermans-beach", name: "Fishermans Beach, Collaroy", nameCn: "渔夫海滩 · 科拉罗伊",
+    lat: -33.7390, lng: 151.3060, type: "rock", baseScore: 73,
+    species: ["Bream", "Drummer", "Luderick", "Tailor"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Float rig", "Pilchards"],
+    tips: "Small rock + sand pocket at Collaroy north end. Appropriate name.",
+    tipsCn: "科拉罗伊北端的小岩礁+沙滩组合，名字贴切。",
+    prefers: { calm: true, wind: ["W"] },
+    preferredTide: "rising"
+  },
+
+  // ==================== Georges River / Botany Bay 补充 ====================
+  {
+    id: "tom-uglys", name: "Tom Uglys Bridge", nameCn: "汤姆丑陋桥",
+    lat: -33.9870, lng: 151.1030, type: "estuary", baseScore: 73,
+    species: ["Bream", "Flathead", "Jewfish", "Tailor"],
+    best: "Run-out tide night.", bestCn: "夜间退潮最佳。",
+    techniques: ["Soft plastics around pylons", "Live bait"],
+    tips: "Georges River bridge pylons are reliable bream + surprise jewfish.",
+    tipsCn: "乔治河桥墩，黑鲷稳定 + 意外石首鱼。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "change"
+  },
+  {
+    id: "oatley-park", name: "Oatley Park", nameCn: "奥特利公园",
+    lat: -33.9910, lng: 151.0830, type: "estuary", baseScore: 70,
+    species: ["Bream", "Flathead", "Whiting"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Prawn baits", "Plastics"],
+    tips: "Georges River bushland park, quieter than Como.",
+    tipsCn: "乔治河林地公园，比 Como 更安静。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "sandringham", name: "Sandringham Bay", nameCn: "桑德林汉姆湾",
+    lat: -33.9930, lng: 151.1380, type: "estuary", baseScore: 69,
+    species: ["Bream", "Flathead", "Whiting"],
+    best: "Run-out tide.", bestCn: "退潮最佳。",
+    techniques: ["Nippers", "Soft plastics"],
+    tips: "Georges River mouth sheltered bay.",
+    tipsCn: "乔治河口避风湾。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "falling"
+  },
+  {
+    id: "ramsgate-beach", name: "Ramsgate Beach", nameCn: "拉姆斯盖特海滩",
+    lat: -33.9830, lng: 151.1420, type: "beach", baseScore: 66,
+    species: ["Whiting", "Flathead", "Bream"],
+    best: "High tide.", bestCn: "高潮最佳。",
+    techniques: ["Nippers", "Beach worms"],
+    tips: "Botany Bay inner beach, sheltered from southerlies.",
+    tipsCn: "植物湾内海滩，避南风。",
+    prefers: { calm: true, wind: ["S", "SW"] },
+    preferredTide: "high"
+  },
+  {
+    id: "lady-robinsons", name: "Lady Robinsons Beach, Brighton-le-Sands", nameCn: "罗宾逊女士海滩 · 布莱顿",
+    lat: -33.9660, lng: 151.1490, type: "beach", baseScore: 65,
+    species: ["Whiting", "Flathead", "Bream"],
+    best: "High tide, dawn.", bestCn: "清晨高潮最佳。",
+    techniques: ["Nippers", "Beach worms"],
+    tips: "Long Botany Bay beach, near Sydney Airport — expect aircraft noise.",
+    tipsCn: "长植物湾海滩，靠近悉尼机场（噪音明显）。",
+    prefers: { calm: true, wind: ["S"] },
+    preferredTide: "high"
+  },
+
+  // ==================== Hawkesbury / Pittwater 补充 ====================
+  {
+    id: "cottage-point", name: "Cottage Point", nameCn: "小屋角",
+    lat: -33.6400, lng: 151.1790, type: "estuary", baseScore: 77,
+    species: ["Flathead", "Bream", "Jewfish", "Tailor"],
+    best: "Run-out tide dawn.", bestCn: "清晨退潮最佳。",
+    techniques: ["Soft plastics", "Live bait"],
+    tips: "Cowan Creek deep water bend, historic inn + fuel stop.",
+    tipsCn: "科万溪深水湾，历史酒馆+加油站。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "falling"
+  },
+  {
+    id: "apple-tree-bay", name: "Apple Tree Bay, Cowan Creek", nameCn: "苹果树湾 · 科万溪",
+    lat: -33.6500, lng: 151.1680, type: "estuary", baseScore: 74,
+    species: ["Flathead", "Bream", "Jewfish"],
+    best: "Run-out tide.", bestCn: "退潮最佳。",
+    techniques: ["Soft plastics", "Vibes"],
+    tips: "Ku-ring-gai NP boat ramp area, deep bay.",
+    tipsCn: "库灵盖国家公园船坡道区，深水湾。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "falling"
+  },
+  {
+    id: "akuna-bay", name: "Akuna Bay", nameCn: "阿库那湾",
+    lat: -33.6530, lng: 151.2290, type: "estuary", baseScore: 73,
+    species: ["Flathead", "Bream", "Kingfish"],
+    best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Live bait", "Soft plastics"],
+    tips: "Marina + boat hire. Summer kings sometimes venture deep into Cowan Creek.",
+    tipsCn: "码头 + 船只出租；夏季黄尾偶尔深入科万溪。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "dangar-island", name: "Dangar Island", nameCn: "丹加岛",
+    lat: -33.5450, lng: 151.2420, type: "estuary", baseScore: 75,
+    species: ["Flathead", "Bream", "Jewfish", "Tailor"],
+    best: "Tide change night.", bestCn: "夜间换潮最佳。",
+    techniques: ["Live bait", "Soft plastics"],
+    tips: "Tiny Hawkesbury island village, ferry from Brooklyn Wharf.",
+    tipsCn: "霍克斯伯里河中的小岛村，Brooklyn 码头有渡轮。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "change"
+  },
+  {
+    id: "juno-point-hawkesbury", name: "Juno Point", nameCn: "朱诺角",
+    lat: -33.5500, lng: 151.2560, type: "estuary", baseScore: 72,
+    species: ["Flathead", "Jewfish", "Bream"],
+    best: "Tide change.", bestCn: "换潮最佳。",
+    techniques: ["Live bait", "Vibes"],
+    tips: "Hawkesbury River point near Brooklyn, deep water.",
+    tipsCn: "Brooklyn 附近霍克斯伯里河点，深水。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "change"
+  },
+
+  // ==================== Inner West / Parramatta River ====================
+  {
+    id: "drummoyne", name: "Drummoyne Wharf", nameCn: "德鲁莫因码头",
+    lat: -33.8510, lng: 151.1550, type: "estuary", baseScore: 66,
+    species: ["Bream", "Flathead", "Squid"],
+    best: "Run-in tide.", bestCn: "涨潮最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Parramatta River wharf, ferry access.",
+    tipsCn: "帕拉玛塔河码头，渡轮可达。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "greenwich-point", name: "Greenwich Point", nameCn: "格林威治角",
+    lat: -33.8400, lng: 151.1840, type: "estuary", baseScore: 70,
+    species: ["Bream", "Flathead", "Squid", "Trevally"],
+    best: "Dawn run-in tide.", bestCn: "清晨涨潮最佳。",
+    techniques: ["Light plastics", "Squid jigs"],
+    tips: "Lane Cove River meets Parramatta River — deep junction.",
+    tipsCn: "莱恩湾河与帕拉玛塔河交汇深水区。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "woolwich-dock", name: "Woolwich Dock", nameCn: "伍尔维奇码头",
+    lat: -33.8410, lng: 151.1780, type: "estuary", baseScore: 68,
+    species: ["Bream", "Squid", "Flathead"],
+    best: "Evening squid.", bestCn: "傍晚鱿鱼最佳。",
+    techniques: ["Squid jigs", "Prawn baits"],
+    tips: "Historic dock area, deep water at the walls.",
+    tipsCn: "历史码头区，壁旁深水。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
+  },
+  {
+    id: "abbotsford-point", name: "Abbotsford Point", nameCn: "阿博茨福德角",
+    lat: -33.8480, lng: 151.1340, type: "estuary", baseScore: 65,
+    species: ["Bream", "Flathead"],
+    best: "Run-in tide.", bestCn: "涨潮最佳。",
+    techniques: ["Prawn baits", "Plastics"],
+    tips: "Parramatta River ferry wharf, inner west access.",
+    tipsCn: "帕拉玛塔河渡轮码头，内西区可达。",
+    prefers: { calm: true, wind: ["any"] },
+    preferredTide: "rising"
   }
 ];

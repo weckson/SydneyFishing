@@ -43,7 +43,12 @@
 </header>
 
 <main>
-  <section id="panel" class="panel">
+  <section id="panel" class="panel sheet-collapsed">
+    <!-- Mobile bottom sheet handle (hidden on desktop). Drag/tap to expand. -->
+    <div class="sheet-handle" id="sheetHandle">
+      <div class="sheet-grip"></div>
+      <div class="sheet-peek" id="sheetPeek">上滑查看推荐钓点</div>
+    </div>
     <div class="panel-header">
       <h2>今日推荐钓点 <span class="h2-en">Today's Recommended Spots</span></h2>
       <div class="mode-selector">

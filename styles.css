@@ -633,11 +633,189 @@ main {
   height: calc(100vh - 74px);
   position: relative;
 }
+/* Desktop: hide sheet handle entirely */
+.sheet-handle { display: none; }
+
+/* ================== MOBILE BOTTOM SHEET ================== */
 @media (max-width: 860px) {
-  main { grid-template-columns: 1fr; grid-template-rows: 55% 45%; }
-  .topbar { padding: 12px 16px; }
-  .brand h1 { font-size: 17px; }
-  .logo { width: 40px; height: 40px; font-size: 22px; }
+  main {
+    display: block;          /* abandon grid, use absolute positioning */
+    grid-template-columns: none;
+    grid-template-rows: none;
+    position: relative;
+    height: calc(100vh - 60px);
+  }
+
+  /* Map fills entire main area — the primary view */
+  .map-wrap {
+    position: absolute !important;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Panel becomes a bottom sheet that slides up from the bottom */
+  .panel {
+    position: fixed !important;
+    left: 0; right: 0;
+    bottom: 0;
+    top: auto;
+    width: 100%;
+    height: 90vh;
+    max-height: 90vh;
+    border-right: 0 !important;
+    border-top: 1px solid var(--line);
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    box-shadow: 0 -6px 32px rgba(0, 20, 40, .22);
+    z-index: 700;
+    transition: transform .38s cubic-bezier(.32, .72, 0, 1);
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+  /* 3 snap states */
+  .panel.sheet-collapsed { transform: translateY(calc(100% - 78px)); }
+  .panel.sheet-half       { transform: translateY(calc(100% - 50vh)); }
+  .panel.sheet-full       { transform: translateY(8vh); }
+
+  /* Sheet handle */
+  .sheet-handle {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 16px 10px;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    touch-action: none;
+  }
+  .sheet-grip {
+    width: 44px; height: 4px;
+    border-radius: 2px;
+    background: #c8d2dd;
+    margin-bottom: 8px;
+    transition: background .15s;
+  }
+  .sheet-handle:hover .sheet-grip { background: #8ea4ba; }
+  .sheet-peek {
+    font-size: 13px; font-weight: 600;
+    color: var(--ink);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+    text-align: center;
+  }
+  .sheet-peek .peek-badge {
+    display: inline-block;
+    background: linear-gradient(135deg, #ffb703, #fb8500);
+    color: #fff;
+    padding: 2px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    margin-right: 6px;
+    box-shadow: 0 2px 6px rgba(251, 133, 0, .3);
+  }
+  /* When collapsed, hide everything except sheet-handle */
+  .panel.sheet-collapsed .panel-header,
+  .panel.sheet-collapsed .status,
+  .panel.sheet-collapsed .spot-list {
+    opacity: 0;
+    pointer-events: none;
+  }
+  .panel.sheet-collapsed {
+    overflow: hidden;
+  }
+
+  /* Top bar compact on mobile */
+  .topbar { padding: 10px 14px; }
+  .topbar::after { display: none; }  /* hide the SVG wave on mobile to save pixels */
+  .brand h1 { font-size: 15px; }
+  .tag { display: none; }               /* hide the subtitle to save space */
+  .logo { width: 36px; height: 36px; font-size: 19px; border-radius: 10px; }
+  .locate-btn {
+    padding: 8px 14px;
+    font-size: 12px;
+  }
+  .icon-btn {
+    padding: 7px 11px;
+    font-size: 11px;
+  }
+  .topbar-actions { gap: 6px; }
+
+  /* Weather box smaller and farther from edges */
+  .weather-box {
+    top: 10px !important;
+    right: 10px !important;
+    min-width: auto;
+    max-width: 58%;
+    font-size: 11px;
+    padding: 10px 12px;
+    border-radius: 12px;
+  }
+  .weather-box h3 { font-size: 10px; margin-bottom: 6px; }
+  .weather-box .row { padding: 3px 0; }
+  .weather-box .row span:first-child { font-size: 10px; }
+  .weather-box .row span:last-child { font-size: 11px; }
+  .prime-windows { margin-top: 6px; padding: 8px 10px; }
+  .prime-header { font-size: 9px; margin-bottom: 4px; }
+  .prime-row { font-size: 10px; padding: 2px 4px; }
+  .prime-icon { font-size: 12px; }
+  .prime-range { font-size: 10.5px; }
+
+  /* Panel inner padding tighter on mobile */
+  .panel-header {
+    padding: 10px 16px 8px;
+    position: static;     /* don't stick on mobile — sheet handle is already sticky */
+  }
+  .panel-header h2 { font-size: 13px; margin-bottom: 8px; }
+
+  /* Mode selector compact */
+  .mode-selector { margin-bottom: 8px; padding: 3px; }
+  .mode-btn { font-size: 10.5px; padding: 7px 6px; }
+
+  /* Filter controls more compact */
+  .controls label { font-size: 10px; gap: 3px; }
+  .controls select { padding: 6px 8px; font-size: 12px; }
+
+  /* Status bar compact */
+  .status { margin: 8px 12px 0; padding: 8px 12px; font-size: 11.5px; }
+
+  /* Spot list tighter */
+  .spot-list { padding: 6px 10px 80px; }
+  .spot-card { padding: 11px; gap: 10px; }
+  .spot-card .rank-badge { width: 38px; height: 38px; font-size: 16px; }
+  .spot-card .spot-name { font-size: 13px; }
+  .spot-card .spot-name-en { font-size: 10px; }
+  .spot-card .spot-meta { font-size: 10.5px; gap: 6px; }
+  .score-box b { font-size: 19px; }
+
+  /* Floating map controls stay above sheet when collapsed */
+  .leaflet-top.leaflet-left { top: 70px; }   /* push zoom controls below the topbar shadow */
+
+  /* Detail modal fills more on mobile */
+  .detail { padding: 0; }
+  .detail-card { max-height: 96vh; border-radius: 16px 16px 0 0; align-self: flex-end; }
+
+  /* Algorithm modal same */
+  #algoModal .detail-card { border-radius: 16px 16px 0 0; }
+}
+
+/* Extra compact for very small phones */
+@media (max-width: 380px) {
+  .brand h1 { font-size: 14px; }
+  .locate-btn { padding: 7px 10px; font-size: 11px; }
+  .icon-btn { padding: 6px 8px; font-size: 10px; }
+  .mode-btn { font-size: 10px; }
+  .weather-box { max-width: 62%; }
 }
 
 /* ---------- Side panel ---------- */
