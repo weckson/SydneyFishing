@@ -439,6 +439,77 @@ html, body {
   color: var(--teal);
 }
 
+/* ---------- Prime fishing time windows ---------- */
+.prime-windows {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #fff8e0, #fff4d0);
+  border: 1px solid #ffd98a;
+  border-radius: 10px;
+}
+.prime-header {
+  font-size: 10.5px; font-weight: 700;
+  color: #8a5a00;
+  text-transform: uppercase; letter-spacing: .4px;
+  margin-bottom: 8px;
+}
+.prime-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; padding: 4px 6px;
+  border-radius: 6px;
+  margin-bottom: 2px;
+}
+.prime-row.active {
+  background: linear-gradient(90deg, rgba(251, 133, 0, .22), rgba(251, 133, 0, .08));
+  font-weight: 700;
+}
+.prime-icon { font-size: 16px; width: 18px; }
+.prime-label {
+  flex: 1; font-weight: 600; color: #5a3800;
+}
+.prime-range {
+  font-family: "SF Mono", "Consolas", monospace;
+  font-weight: 700; color: #6b4800;
+  font-size: 12px;
+}
+.prime-now {
+  margin-top: 6px;
+  text-align: center;
+  font-size: 11px; font-weight: 700;
+  color: #e08900;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, .6);
+  border-radius: 6px;
+}
+
+/* ---------- Prime badge inside detail hero ---------- */
+.prime-badge {
+  margin-top: 14px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .22);
+  border-radius: 10px;
+  backdrop-filter: blur(4px);
+}
+.prime-badge-row {
+  display: flex; gap: 12px; flex-wrap: wrap;
+  font-size: 11.5px; color: #fff8e0;
+  font-weight: 600;
+}
+.prime-badge-row span {
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.prime-badge-now {
+  display: inline-block;
+  margin-bottom: 6px;
+  padding: 3px 10px;
+  background: linear-gradient(135deg, #ffb703, #fb8500);
+  color: #fff;
+  font-size: 11px; font-weight: 700;
+  border-radius: 99px;
+  box-shadow: 0 3px 10px rgba(251, 133, 0, .4);
+}
+
 /* ---------- Rig recommendations ---------- */
 .rig-tabs {
   display: flex; gap: 6px; flex-wrap: wrap;
@@ -740,6 +811,52 @@ main {
 /* ---------- Map ---------- */
 .map-wrap { position: relative; }
 #map { width: 100%; height: 100%; background: #cfe2f0; }
+
+/* ---------- Center crosshair (fixed at map center, doesn't block map drag) ---------- */
+.map-crosshair {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  z-index: 500;
+  display: flex; flex-direction: column; align-items: center;
+  filter: drop-shadow(0 4px 10px rgba(0, 30, 60, .35));
+}
+.crosshair-pin {
+  font-size: 32px;
+  line-height: 1;
+  animation: crosshairBounce 2.5s ease-in-out infinite;
+}
+@keyframes crosshairBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.crosshair-ring {
+  position: absolute;
+  top: 22px; left: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: #fb8500;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 4px rgba(251, 133, 0, .25);
+  animation: crosshairPulse 2s ease-in-out infinite;
+}
+@keyframes crosshairPulse {
+  0%, 100% { box-shadow: 0 0 0 4px rgba(251, 133, 0, .25); }
+  50% { box-shadow: 0 0 0 8px rgba(251, 133, 0, .1); }
+}
+.crosshair-label {
+  margin-top: 6px;
+  padding: 3px 10px;
+  background: rgba(1, 30, 60, .85);
+  backdrop-filter: blur(6px);
+  color: #fff;
+  font-size: 10.5px; font-weight: 600;
+  letter-spacing: .3px;
+  border-radius: 99px;
+  white-space: nowrap;
+}
 .leaflet-container { font-family: inherit; }
 .leaflet-popup-content-wrapper { border-radius: 12px; box-shadow: var(--shadow-lg); }
 .leaflet-popup-content {

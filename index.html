@@ -57,8 +57,10 @@
             <option value="5">5 公里</option>
             <option value="10">10 公里</option>
             <option value="20" selected>20 公里</option>
-            <option value="50">50 公里</option>
-            <option value="999">全悉尼 All Sydney</option>
+            <option value="40">40 公里</option>
+            <option value="60">60 公里</option>
+            <option value="100">100 公里</option>
+            <option value="999">不限 Unlimited</option>
           </select>
         </label>
         <label>交通便利 / Access
@@ -94,6 +96,12 @@
 
   <section class="map-wrap">
     <div id="map"></div>
+    <!-- Fixed crosshair pin always at map center. pointer-events:none so it never blocks map drag. -->
+    <div id="mapCrosshair" class="map-crosshair" aria-hidden="true">
+      <div class="crosshair-ring"></div>
+      <div class="crosshair-pin">📍</div>
+      <div class="crosshair-label" id="crosshairLabel">搜索中心</div>
+    </div>
     <div id="weatherBox" class="weather-box hidden">
       <h3>当前海况 · Live</h3>
       <div id="weatherContent"></div>

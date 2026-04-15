@@ -43,14 +43,23 @@ const DEFAULT_TIDE_BY_TYPE = {
 
 let map, userMarker, userLatLng = null;
 let spotMarkers = [];
-let currentWeather = null;  // { weather, marine, tide }
+let currentWeather = null;  // { weather, marine, tide, sun }
 let sortedSpots = [];
 let currentMode = "fish";   // default: fish-first
 let mapCenterLatLng = null;   // Updated on map moveend, used as reference point for scoring
 let mapMoveTimer = null;      // Debounce timer for moveend
 let conditionsCenterLatLng = null;  // Last center used to fetch weather/tide conditions
+let radiusCircle = null;      // Leaflet circle visualizing current search radius around map center
 
 function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+
+// Normalize the raw multiplicative score to a 0-100 display scale.
+// Raw max in ideal conditions: ~94 (base) × 1.39 (weather) × 1.22 (tide) × 1.15 (time) × 1.05 (access) ≈ 192
+// We scale so a top spot with perfect conditions shows ~100 and mediocre/bad spots show lower values.
+function toDisplayScore(rawScore) {
+  const normalized = rawScore / 1.92;
+  return Math.max(0, Math.min(100, Math.round(normalized)));
+}
 
 // Returns the reference point for scoring: map center if map has been moved, else user location, else Sydney CBD.
 function referencePoint() {
@@ -91,12 +100,21 @@ function initMap() {
   const c0 = map.getCenter();
   mapCenterLatLng = [c0.lat, c0.lng];
   drawSpotMarkers();
+  drawRadiusCircle();
 
-  // Dynamic: on pan/zoom end, update reference point and re-render the list.
-  // Debounced to avoid thrashing during rapid interactions.
+  // Dynamic: on move (live) keep circle centered; on moveend update scoring.
+  map.on("move", () => {
+    // keep circle pinned to map center during pan
+    if (radiusCircle) {
+      const c = map.getCenter();
+      radiusCircle.setLatLng(c);
+    }
+  });
+
   map.on("moveend", () => {
     const c = map.getCenter();
     mapCenterLatLng = [c.lat, c.lng];
+    drawRadiusCircle(); // refresh in case zoom changed
     if (mapMoveTimer) clearTimeout(mapMoveTimer);
     mapMoveTimer = setTimeout(async () => {
       // If center has drifted far from where we last fetched conditions, re-fetch
@@ -107,6 +125,34 @@ function initMap() {
       updateReferenceIndicator();
     }, 350);
   });
+}
+
+// Draws (or updates) the Leaflet circle visualizing the current search radius around the map center.
+function drawRadiusCircle() {
+  if (!map) return;
+  const radiusEl = document.getElementById("radiusSel");
+  const radiusKm = radiusEl ? parseFloat(radiusEl.value) : 20;
+  // Skip rendering circle for "unlimited" (999)
+  if (radiusKm >= 999) {
+    if (radiusCircle) { map.removeLayer(radiusCircle); radiusCircle = null; }
+    return;
+  }
+  const center = map.getCenter();
+  if (radiusCircle) {
+    radiusCircle.setLatLng(center);
+    radiusCircle.setRadius(radiusKm * 1000);
+  } else {
+    radiusCircle = L.circle(center, {
+      radius: radiusKm * 1000,
+      color: "#fb8500",
+      weight: 2,
+      opacity: 0.6,
+      fillColor: "#fb8500",
+      fillOpacity: 0.06,
+      interactive: false,
+      dashArray: "6 4"
+    }).addTo(map);
+  }
 }
 
 // Returns true if the map center is >20km away from the point we last fetched weather/tide for.
@@ -148,15 +194,54 @@ function drawSpotMarkers(bestId = null, topIds = new Set()) {
 
 async function fetchWeather(lat, lng) {
   try {
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code&timezone=Australia%2FSydney`;
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code&daily=sunrise,sunset&timezone=Australia%2FSydney`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("weather api failed");
     const data = await res.json();
-    return data.current;
+    // Return both current and daily info as a combined object
+    return {
+      ...data.current,
+      _daily: data.daily || null
+    };
   } catch (e) {
     console.warn("weather fetch failed", e);
     return null;
   }
+}
+
+// Compute today's "prime fishing windows" from sunrise/sunset.
+// Dawn window: sunrise - 30min to sunrise + 2h30min
+// Dusk window: sunset - 2h to sunset + 30min
+function computePrimeWindows(daily) {
+  if (!daily || !daily.sunrise || !daily.sunset || !daily.sunrise[0] || !daily.sunset[0]) {
+    return null;
+  }
+  const sunrise = new Date(daily.sunrise[0]);
+  const sunset = new Date(daily.sunset[0]);
+  const dawnStart = new Date(sunrise.getTime() - 30 * 60 * 1000);
+  const dawnEnd = new Date(sunrise.getTime() + 150 * 60 * 1000);
+  const duskStart = new Date(sunset.getTime() - 120 * 60 * 1000);
+  const duskEnd = new Date(sunset.getTime() + 30 * 60 * 1000);
+  return {
+    sunrise, sunset,
+    dawn: { start: dawnStart, end: dawnEnd },
+    dusk: { start: duskStart, end: duskEnd }
+  };
+}
+
+function formatTime(date) {
+  if (!date) return "-";
+  const h = date.getHours().toString().padStart(2, "0");
+  const m = date.getMinutes().toString().padStart(2, "0");
+  return `${h}:${m}`;
+}
+
+function currentWindowStatus(windows) {
+  if (!windows) return null;
+  const now = new Date();
+  if (now >= windows.dawn.start && now <= windows.dawn.end) return "dawn";
+  if (now >= windows.dusk.start && now <= windows.dusk.end) return "dusk";
+  return null;
 }
 
 async function fetchMarine(lat, lng) {
@@ -533,21 +618,17 @@ function render() {
     return { spot: s, ...r };
   });
 
-  // All modes now apply radius filter from the reference point (map center or user loc).
-  // Fish mode: larger effective radius (ignore the user-picked radius if it's < 40km) to
-  //   give users wide-area best spots; but still keep 999 (ALL) and 50km+ working as-is.
-  const effectiveRadius = (currentMode === "fish" && radius < 40) ? 40 : radius;
-
+  // All modes respect the exact user-picked radius from the map center.
   scored.sort((a, b) => {
-    if (a.dist > effectiveRadius && b.dist > effectiveRadius) return b.score - a.score;
-    if (a.dist > effectiveRadius) return 1;
-    if (b.dist > effectiveRadius) return -1;
+    if (a.dist > radius && b.dist > radius) return b.score - a.score;
+    if (a.dist > radius) return 1;
+    if (b.dist > radius) return -1;
     return b.score - a.score;
   });
 
   sortedSpots = scored;
 
-  const visible = scored.filter(s => s.dist <= effectiveRadius);
+  const visible = scored.filter(s => s.dist <= radius);
   const toShow = visible.length ? visible : scored.slice(0, 6);
 
   listEl.innerHTML = "";
@@ -573,8 +654,8 @@ function render() {
         <div class="spot-species">${s.species.slice(0, 4).map(sp => `<span class="sp-chip">${sp}</span>`).join("")}</div>
       </div>
       <div class="score-box">
-        <b>${Math.round(entry.score)}</b>
-        <small>推荐分</small>
+        <b>${toDisplayScore(entry.score)}</b>
+        <small>推荐 / 100</small>
       </div>
     `;
     card.onclick = () => showDetail(s.id);
@@ -609,12 +690,13 @@ function showDetail(id) {
       <div class="sub">${s.name} · ${typeIcon(s.type)} ${typeLabel(s.type)}${userLatLng ? " · " + entry.dist.toFixed(1) + " km 外" : ""}</div>
       <div class="detail-chips">${s.species.map(sp => `<span class="chip">${sp}</span>`).join("")}</div>
       <div class="detail-score">
-        <div class="detail-score-number">${Math.round(entry.score)}</div>
+        <div class="detail-score-number">${toDisplayScore(entry.score)}</div>
         <div style="flex:1">
-          <div style="font-size:10px;opacity:.75;letter-spacing:.4px;margin-bottom:4px">综合推荐分 · Recommendation Score <a href="#" id="algoLink" style="color:#ffd166;text-decoration:underline">算法说明 ℹ️</a></div>
-          <div class="score-bar"><div style="width:${Math.min(100, entry.score)}%"></div></div>
+          <div style="font-size:10px;opacity:.75;letter-spacing:.4px;margin-bottom:4px">综合推荐分 · 满分 100 · <a href="#" id="algoLink" style="color:#ffd166;text-decoration:underline">算法 ℹ️</a></div>
+          <div class="score-bar"><div style="width:${toDisplayScore(entry.score)}%"></div></div>
         </div>
       </div>
+      ${renderPrimeWindowBadge()}
     </div>
 
     <div class="detail-body">
@@ -697,8 +779,28 @@ function showWeather() {
   const w = currentWeather.weather;
   const m = currentWeather.marine;
   const t = currentWeather.tide;
+  const windows = computePrimeWindows(w._daily);
+  const winStatus = currentWindowStatus(windows);
   const content = document.getElementById("weatherContent");
   const tideText = tideDisplay(t);
+
+  const primeTimeBlock = windows ? `
+    <div class="prime-windows">
+      <div class="prime-header">🎣 今日最佳时段 · Prime Time</div>
+      <div class="prime-row ${winStatus === 'dawn' ? 'active' : ''}">
+        <span class="prime-icon">🌅</span>
+        <span class="prime-label">晨 Dawn</span>
+        <span class="prime-range">${formatTime(windows.dawn.start)} – ${formatTime(windows.dawn.end)}</span>
+      </div>
+      <div class="prime-row ${winStatus === 'dusk' ? 'active' : ''}">
+        <span class="prime-icon">🌇</span>
+        <span class="prime-label">昏 Dusk</span>
+        <span class="prime-range">${formatTime(windows.dusk.start)} – ${formatTime(windows.dusk.end)}</span>
+      </div>
+      ${winStatus ? `<div class="prime-now">✨ 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
+    </div>
+  ` : "";
+
   content.innerHTML = `
     <div class="row"><span>气温 Temp</span><span>${w.temperature_2m?.toFixed(1) ?? "-"} °C</span></div>
     <div class="row"><span>风 Wind</span><span>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</span></div>
@@ -706,8 +808,27 @@ function showWeather() {
     ${m ? `<div class="row"><span>浪高 Wave</span><span>${m.wave_height?.toFixed(1) ?? "-"} m</span></div>` : ""}
     ${m ? `<div class="row"><span>周期 Period</span><span>${m.wave_period?.toFixed(0) ?? "-"} s</span></div>` : ""}
     ${tideText ? `<div class="row tide-row"><span>潮汐 Tide</span><span>${tideText}</span></div>` : ""}
+    ${primeTimeBlock}
   `;
   box.classList.remove("hidden");
+}
+
+// Small badge shown in the detail hero with today's prime windows.
+function renderPrimeWindowBadge() {
+  if (!currentWeather || !currentWeather.weather) return "";
+  const windows = computePrimeWindows(currentWeather.weather._daily);
+  if (!windows) return "";
+  const winStatus = currentWindowStatus(windows);
+  const nowActive = winStatus ? `<span class="prime-badge-now">✨ 正值黄金时段</span>` : "";
+  return `
+    <div class="prime-badge">
+      ${nowActive}
+      <div class="prime-badge-row">
+        <span>🌅 晨钓 ${formatTime(windows.dawn.start)}-${formatTime(windows.dawn.end)}</span>
+        <span>🌇 昏钓 ${formatTime(windows.dusk.start)}-${formatTime(windows.dusk.end)}</span>
+      </div>
+    </div>
+  `;
 }
 
 async function locateUser() {
@@ -782,7 +903,7 @@ function updateReferenceIndicator() {
   if (useUser && userLatLng) {
     statusEl.classList.remove("error");
     statusEl.innerHTML = best
-      ? `📍 基于你的位置 · 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · 评分 ${Math.round(best.score)}`
+      ? `📍 基于你的位置 · 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.score)}/100`
       : `📍 基于你的位置`;
   } else {
     statusEl.classList.remove("error");
@@ -791,7 +912,7 @@ function updateReferenceIndicator() {
       ? ` <a href="#" id="backToMe" style="color:#0077b6;text-decoration:underline">返回我的位置</a>`
       : "";
     statusEl.innerHTML = best
-      ? `🗺️ 基于地图视野（${label}）· 推荐：<b>${escapeHtml(best.spot.nameCn)}</b>${backBtn}`
+      ? `🗺️ 基于地图视野（${label}）· 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.score)}/100${backBtn}`
       : `🗺️ 基于地图视野（${label}）${backBtn}`;
     const back = document.getElementById("backToMe");
     if (back) back.onclick = (e) => {
@@ -1010,8 +1131,16 @@ function bindReviewForm(spotId) {
 document.addEventListener("DOMContentLoaded", () => {
   initMap();
   render();
+  // Kick off an initial conditions fetch using the map center so Prime Windows and tide
+  // are available before the user even presses "locate me".
+  loadConditionsAt(mapCenterLatLng).then(() => {
+    render();
+  });
   document.getElementById("locateBtn").addEventListener("click", locateUser);
-  document.getElementById("radiusSel").addEventListener("change", render);
+  document.getElementById("radiusSel").addEventListener("change", () => {
+    drawRadiusCircle();
+    render();
+  });
   document.getElementById("speciesSel").addEventListener("change", render);
   document.getElementById("accessSel").addEventListener("change", render);
   // Mode selector
