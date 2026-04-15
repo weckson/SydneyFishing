@@ -46,8 +46,16 @@ let spotMarkers = [];
 let currentWeather = null;  // { weather, marine, tide }
 let sortedSpots = [];
 let currentMode = "fish";   // default: fish-first
+let mapCenterLatLng = null;   // Updated on map moveend, used as reference point for scoring
+let mapMoveTimer = null;      // Debounce timer for moveend
+let conditionsCenterLatLng = null;  // Last center used to fetch weather/tide conditions
 
 function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
+
+// Returns the reference point for scoring: map center if map has been moved, else user location, else Sydney CBD.
+function referencePoint() {
+  return mapCenterLatLng || userLatLng || SYDNEY_CENTER;
+}
 
 function degToCompass(deg) {
   if (deg == null) return "-";
@@ -66,29 +74,65 @@ function haversineKm(a, b) {
 }
 
 function initMap() {
-  map = L.map("map", { zoomControl: true }).setView(SYDNEY_CENTER, 11);
+  // Extended initial view covers Sydney (center) with enough zoom-out capability for Newcastle/Wollongong
+  map = L.map("map", {
+    zoomControl: true,
+    minZoom: 7,            // zoom 7 shows from Newcastle to Kiama easily
+    maxZoom: 20,
+    worldCopyJump: false
+  }).setView(SYDNEY_CENTER, 10);
   // CartoDB Voyager — free, no API key, no referer requirement, clean look
   L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
     maxZoom: 20,
     subdomains: "abcd",
     attribution: '© OpenStreetMap · © CARTO'
   }).addTo(map);
+  // Initial reference point = initial map center
+  const c0 = map.getCenter();
+  mapCenterLatLng = [c0.lat, c0.lng];
   drawSpotMarkers();
+
+  // Dynamic: on pan/zoom end, update reference point and re-render the list.
+  // Debounced to avoid thrashing during rapid interactions.
+  map.on("moveend", () => {
+    const c = map.getCenter();
+    mapCenterLatLng = [c.lat, c.lng];
+    if (mapMoveTimer) clearTimeout(mapMoveTimer);
+    mapMoveTimer = setTimeout(async () => {
+      // If center has drifted far from where we last fetched conditions, re-fetch
+      if (shouldRefetchConditions()) {
+        await loadConditionsAt(mapCenterLatLng);
+      }
+      render();
+      updateReferenceIndicator();
+    }, 350);
+  });
 }
 
-function spotIcon(type, isBest) {
-  const color = isBest ? "#ffb703" : ({
+// Returns true if the map center is >20km away from the point we last fetched weather/tide for.
+function shouldRefetchConditions() {
+  if (!conditionsCenterLatLng) return true;
+  return haversineKm(mapCenterLatLng, conditionsCenterLatLng) > 20;
+}
+
+function spotIcon(type, isBest, isTop) {
+  const color = isBest ? "#ffb703" : isTop ? "#fb8500" : ({
     rock: "#0077b6", harbour: "#00b4d8", estuary: "#06a77d", beach: "#f4a261"
   }[type] || "#0077b6");
-  const html = `<div style="background:${color};border:2px solid #fff;width:18px;height:18px;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`;
-  return L.divIcon({ html, className: "", iconSize: [18,18], iconAnchor: [9,9] });
+  const size = isBest ? 24 : isTop ? 20 : 16;
+  const ring = isBest ? "box-shadow:0 0 0 4px rgba(255,183,3,.3),0 1px 4px rgba(0,0,0,.4);" :
+               isTop ? "box-shadow:0 0 0 3px rgba(251,133,0,.25),0 1px 4px rgba(0,0,0,.4);" :
+               "box-shadow:0 1px 4px rgba(0,0,0,.4);";
+  const html = `<div style="background:${color};border:2px solid #fff;width:${size}px;height:${size}px;border-radius:50%;${ring}"></div>`;
+  return L.divIcon({ html, className: "", iconSize: [size, size], iconAnchor: [size/2, size/2] });
 }
 
-function drawSpotMarkers(bestId = null) {
+function drawSpotMarkers(bestId = null, topIds = new Set()) {
   spotMarkers.forEach(m => map.removeLayer(m));
   spotMarkers = [];
   window.SYDNEY_SPOTS.forEach(s => {
-    const marker = L.marker([s.lat, s.lng], { icon: spotIcon(s.type, s.id === bestId) })
+    const isTop = topIds.has(s.id);
+    const marker = L.marker([s.lat, s.lng], { icon: spotIcon(s.type, s.id === bestId, isTop) })
       .addTo(map)
       .bindPopup(`<b>${s.nameCn}</b><br><span style="color:#6b8299;font-size:11px">${s.name}</span><br>🐟 ${s.species.slice(0,3).join(" · ")}<br><a href="#" data-id="${s.id}" class="popup-link">查看详情 View →</a>`);
     marker.on("popupopen", () => {
@@ -228,12 +272,12 @@ function tideFactorFor(spot, tide) {
   return { mult: 0.90, reason: "潮位不理想 (-10%)" };
 }
 
-function scoreSpot(spot, userLoc, weather, marine, tide, mode) {
+function scoreSpot(spot, refLoc, weather, marine, tide, mode) {
   const modeCfg = SCORING_MODES[mode] || SCORING_MODES.fish;
   const reasons = [];
 
-  // ----- Distance (mode-dependent) -----
-  const dist = userLoc ? haversineKm(userLoc, [spot.lat, spot.lng]) : 15;
+  // ----- Distance (mode-dependent). refLoc is the map-center or user location. -----
+  const dist = refLoc ? haversineKm(refLoc, [spot.lat, spot.lng]) : 15;
   const distancePenalty = modeCfg.distancePenalty(dist);
   if (mode === "fish") {
     reasons.push("距离忽略 (鱼况优先)");
@@ -467,6 +511,7 @@ function render() {
   const speciesFilter = document.getElementById("speciesSel").value;
   const accessFilter = parseInt(document.getElementById("accessSel").value, 10) || 0;
   const listEl = document.getElementById("spotList");
+  const refLoc = referencePoint();
 
   let spots = window.SYDNEY_SPOTS.slice();
   if (speciesFilter) spots = spots.filter(s => s.species.includes(speciesFilter));
@@ -481,30 +526,28 @@ function render() {
 
   const scored = spots.map(s => {
     const r = scoreSpot(
-      s, userLatLng,
+      s, refLoc,
       currentWeather?.weather, currentWeather?.marine, currentWeather?.tide,
       currentMode
     );
     return { spot: s, ...r };
   });
 
-  // Fish mode: ignore radius entirely. Near/Family: apply radius.
-  if (currentMode !== "fish" && userLatLng) {
-    scored.sort((a,b) => {
-      if (a.dist > radius && b.dist > radius) return b.score - a.score;
-      if (a.dist > radius) return 1;
-      if (b.dist > radius) return -1;
-      return b.score - a.score;
-    });
-  } else {
-    scored.sort((a,b) => b.score - a.score);
-  }
+  // All modes now apply radius filter from the reference point (map center or user loc).
+  // Fish mode: larger effective radius (ignore the user-picked radius if it's < 40km) to
+  //   give users wide-area best spots; but still keep 999 (ALL) and 50km+ working as-is.
+  const effectiveRadius = (currentMode === "fish" && radius < 40) ? 40 : radius;
+
+  scored.sort((a, b) => {
+    if (a.dist > effectiveRadius && b.dist > effectiveRadius) return b.score - a.score;
+    if (a.dist > effectiveRadius) return 1;
+    if (b.dist > effectiveRadius) return -1;
+    return b.score - a.score;
+  });
 
   sortedSpots = scored;
 
-  const visible = (currentMode !== "fish" && userLatLng)
-    ? scored.filter(s => s.dist <= radius)
-    : scored;
+  const visible = scored.filter(s => s.dist <= effectiveRadius);
   const toShow = visible.length ? visible : scored.slice(0, 6);
 
   listEl.innerHTML = "";
@@ -539,8 +582,12 @@ function render() {
   });
 
   if (toShow[0]) {
-    drawSpotMarkers(toShow[0].spot.id);
+    // Highlight top 5 on the map (orange ring) and the #1 in gold
+    const topIds = new Set(toShow.slice(0, 5).map(e => e.spot.id));
+    drawSpotMarkers(toShow[0].spot.id, topIds);
   }
+
+  updateReferenceIndicator();
 }
 
 function typeLabel(t) {
@@ -709,17 +756,65 @@ async function locateUser() {
 }
 
 async function loadConditions() {
-  if (!userLatLng) return;
+  const ref = referencePoint();
+  await loadConditionsAt(ref);
+}
+
+async function loadConditionsAt(latLng) {
+  if (!latLng) return;
   const [weather, marine, tide] = await Promise.all([
-    fetchWeather(userLatLng[0], userLatLng[1]),
-    fetchMarine(userLatLng[0], userLatLng[1]),
-    fetchTide(userLatLng[0], userLatLng[1])
+    fetchWeather(latLng[0], latLng[1]),
+    fetchMarine(latLng[0], latLng[1]),
+    fetchTide(latLng[0], latLng[1])
   ]);
   currentWeather = { weather, marine, tide };
+  conditionsCenterLatLng = latLng;
   showWeather();
 }
 
-// ---------- Reviews ----------
+// Update the status bar to reflect whether recommendations are based on user location or map center.
+function updateReferenceIndicator() {
+  const statusEl = document.getElementById("status");
+  if (!statusEl) return;
+  if (!mapCenterLatLng) return;
+  const useUser = userLatLng && haversineKm(mapCenterLatLng, userLatLng) < 3;
+  const best = sortedSpots[0];
+  if (useUser && userLatLng) {
+    statusEl.classList.remove("error");
+    statusEl.innerHTML = best
+      ? `📍 基于你的位置 · 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · 评分 ${Math.round(best.score)}`
+      : `📍 基于你的位置`;
+  } else {
+    statusEl.classList.remove("error");
+    const label = regionLabelForLatLng(mapCenterLatLng);
+    const backBtn = userLatLng
+      ? ` <a href="#" id="backToMe" style="color:#0077b6;text-decoration:underline">返回我的位置</a>`
+      : "";
+    statusEl.innerHTML = best
+      ? `🗺️ 基于地图视野（${label}）· 推荐：<b>${escapeHtml(best.spot.nameCn)}</b>${backBtn}`
+      : `🗺️ 基于地图视野（${label}）${backBtn}`;
+    const back = document.getElementById("backToMe");
+    if (back) back.onclick = (e) => {
+      e.preventDefault();
+      if (userLatLng) {
+        map.flyTo(userLatLng, 12, { duration: 0.8 });
+      }
+    };
+  }
+}
+
+// Rough region label by lat for the status bar.
+function regionLabelForLatLng(p) {
+  const lat = p[0];
+  if (lat < -34.3) return "Illawarra / Kiama";
+  if (lat < -34.1) return "Wollongong / Illawarra";
+  if (lat < -33.7) return "悉尼 Sydney";
+  if (lat < -33.2) return "悉尼北 / Central Coast";
+  if (lat < -32.85) return "Central Coast";
+  return "Newcastle / Hunter";
+}
+
+// ---------- Reviews & Community References ----------
 const REVIEW_KEY = "sf_reviews_v1";
 
 function loadUserReviews() {
@@ -729,64 +824,139 @@ function loadUserReviews() {
 function saveUserReviews(obj) {
   try { localStorage.setItem(REVIEW_KEY, JSON.stringify(obj)); } catch (e) {}
 }
-function getAllReviews(spotId) {
-  const seeded = (window.SEED_REVIEWS && window.SEED_REVIEWS[spotId]) || [];
-  const user = loadUserReviews()[spotId] || [];
-  return [...user, ...seeded];
+function getSeedRefs(spotId) {
+  return (window.SEED_REVIEWS && window.SEED_REVIEWS[spotId]) || [];
 }
-function avgRating(reviews) {
-  if (!reviews.length) return 0;
-  return reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+function getUserReviews(spotId) {
+  return (loadUserReviews()[spotId] || []);
+}
+function avgRating(items) {
+  if (!items.length) return 0;
+  return items.reduce((s, r) => s + (r.rating || 0), 0) / items.length;
 }
 function starString(n) {
   const full = Math.round(n);
   return "★★★★★".slice(0, full) + "☆☆☆☆☆".slice(0, 5 - full);
 }
-function renderReviewsSection(spotId) {
-  const reviews = getAllReviews(spotId);
-  const avg = avgRating(reviews);
-  const summary = reviews.length
-    ? `<div class="reviews-summary">
-         <div>
-           <div class="big-star">${avg.toFixed(1)}</div>
-         </div>
-         <div>
-           <div class="stars-line">${starString(avg)}</div>
-           <div class="count">${reviews.length} 条钓友评论 · ${reviews.length} reviews</div>
-         </div>
-       </div>`
-    : `<div class="no-reviews">暂无评论，来做第一个分享鱼获的钓友吧 🎣</div>`;
 
-  const list = reviews.map(r => `
+function sourceTypeIcon(t) {
+  return ({
+    "forum": "💬",
+    "reddit": "🟠",
+    "youtube": "📺",
+    "blog": "📝",
+    "official": "🏛️"
+  })[t] || "🔗";
+}
+
+function renderRefItem(ref) {
+  const stars = starString(ref.rating || 0);
+  const icon = sourceTypeIcon(ref.type);
+  return `
+    <a class="ref-item" href="${escapeAttr(ref.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="ref-icon">${icon}</div>
+      <div class="ref-body">
+        <div class="ref-head">
+          <span class="ref-source">${escapeHtml(ref.source)}</span>
+          <span class="ref-stars">${stars}</span>
+        </div>
+        <div class="ref-note">${escapeHtml(ref.note)}</div>
+        <div class="ref-url">${escapeHtml(ref.url.replace(/^https?:\/\//, "").slice(0, 60))}${ref.url.length > 67 ? "…" : ""} ↗</div>
+      </div>
+    </a>
+  `;
+}
+
+function renderUserReview(r) {
+  const avatar = (r.user || "?").slice(0, 1).toUpperCase();
+  const sourceLink = r.sourceUrl ? `
+    <a class="review-source" href="${escapeAttr(r.sourceUrl)}" target="_blank" rel="noopener noreferrer">
+      🔗 ${escapeHtml(r.sourceName || "来源")} ↗
+    </a>
+  ` : "";
+  return `
     <div class="review-item">
       <div class="review-head">
         <div class="review-user">
-          <div class="review-avatar">${(r.user || "?").slice(0,1).toUpperCase()}</div>
+          <div class="review-avatar">${escapeHtml(avatar)}</div>
           <div>
             ${escapeHtml(r.user)}
-            <div class="review-date">${r.date}</div>
+            <div class="review-date">${escapeHtml(r.date || "")}</div>
           </div>
         </div>
+        <div class="review-stars">${starString(r.rating || 0)}</div>
       </div>
-      <div class="review-stars">${starString(r.rating)}</div>
       <div class="review-text">${escapeHtml(r.text)}</div>
+      ${sourceLink}
     </div>
-  `).join("");
+  `;
+}
+
+function renderReviewsSection(spotId) {
+  const refs = getSeedRefs(spotId);
+  const globalRefs = getSeedRefs("_global");
+  const userReviews = getUserReviews(spotId);
+  const allRatings = [...refs, ...userReviews];
+  const avg = avgRating(allRatings);
+
+  const summary = allRatings.length
+    ? `<div class="reviews-summary">
+         <div class="big-star">${avg.toFixed(1)}</div>
+         <div>
+           <div class="stars-line">${starString(avg)}</div>
+           <div class="count">${refs.length} 条社区参考 · ${userReviews.length} 条用户评论</div>
+         </div>
+       </div>`
+    : `<div class="no-reviews">暂无参考资料，成为第一位分享钓友</div>`;
+
+  const refsBlock = refs.length ? `
+    <div class="refs-block">
+      <div class="refs-header">📚 社区参考资料 · External References</div>
+      <div class="refs-list">${refs.map(renderRefItem).join("")}</div>
+      <div class="refs-disclaimer">* 链接指向公开论坛搜索/讨论页面，点击可查看社区原始讨论</div>
+    </div>
+  ` : "";
+
+  const userBlock = userReviews.length ? `
+    <div class="user-reviews-block">
+      <div class="refs-header">👥 用户评论 · User Reviews</div>
+      <div class="review-list">${userReviews.map(renderUserReview).join("")}</div>
+    </div>
+  ` : "";
+
+  const globalBlock = globalRefs.length ? `
+    <div class="refs-block global">
+      <div class="refs-header">⚠️ 出钓前必查 · Before You Go</div>
+      <div class="refs-list">${globalRefs.map(renderRefItem).join("")}</div>
+    </div>
+  ` : "";
 
   return `
     ${summary}
-    <div class="review-list">${list}</div>
+    ${refsBlock}
+    ${userBlock}
+    ${globalBlock}
     <div class="review-form">
-      <h5>写下你的评论 · Leave a Review</h5>
+      <h5>分享你的钓获 · Leave a Review</h5>
       <input type="text" id="rv-user" maxlength="20" placeholder="昵称 Nickname" />
       <div class="star-picker" id="rv-stars" data-value="5">
         <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span>
         <span data-v="4">★</span><span data-v="5">★</span>
       </div>
       <textarea id="rv-text" maxlength="400" placeholder="分享一下你的鱼获、饵料或当天的海况… Share your catch, bait, or conditions..."></textarea>
+      <div class="source-fields">
+        <input type="text" id="rv-source-name" maxlength="40" placeholder="来源名称（可选）例：YouTube 某频道" />
+        <input type="url" id="rv-source-url" maxlength="300" placeholder="来源链接（可选）https://..." />
+      </div>
       <button class="review-submit" id="rv-submit" data-spot="${spotId}">发布评论</button>
     </div>
   `;
+}
+
+function escapeAttr(s) {
+  return (s || "").replace(/["'<>&]/g, c => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+  }[c]));
 }
 function escapeHtml(s) {
   return (s || "").replace(/[&<>"']/g, c => ({
@@ -809,11 +979,25 @@ function bindReviewForm(spotId) {
     const user = document.getElementById("rv-user").value.trim() || "匿名钓友";
     const text = document.getElementById("rv-text").value.trim();
     const rating = parseInt(picker.dataset.value, 10) || 5;
+    const sourceName = document.getElementById("rv-source-name")?.value.trim() || "";
+    let sourceUrl = document.getElementById("rv-source-url")?.value.trim() || "";
+    // Basic URL validation
+    if (sourceUrl && !/^https?:\/\//i.test(sourceUrl)) {
+      sourceUrl = "https://" + sourceUrl;
+    }
+    if (sourceUrl) {
+      try { new URL(sourceUrl); } catch (e) {
+        alert("请检查来源链接格式，需要以 http:// 或 https:// 开头");
+        return;
+      }
+    }
     if (!text) { alert("请输入评论内容"); return; }
     const all = loadUserReviews();
     const list = all[spotId] || [];
     list.unshift({
       user, rating, text,
+      sourceName: sourceName || undefined,
+      sourceUrl: sourceUrl || undefined,
       date: new Date().toISOString().slice(0, 10)
     });
     all[spotId] = list;

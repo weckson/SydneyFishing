@@ -229,6 +229,109 @@ html, body {
   color: var(--muted); font-size: 12.5px; font-style: italic;
 }
 
+/* ---------- Reference items (external sources) ---------- */
+.refs-block {
+  margin-top: 14px;
+  padding: 14px;
+  background: #f8fbfd;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+.refs-block.global {
+  background: linear-gradient(135deg, #fff4e8, #fff9f0);
+  border-color: #ffd49e;
+}
+.user-reviews-block { margin-top: 14px; }
+.refs-header {
+  font-size: 11.5px; font-weight: 700;
+  color: var(--ocean-2);
+  text-transform: uppercase; letter-spacing: .4px;
+  margin-bottom: 10px;
+}
+.refs-list { display: flex; flex-direction: column; gap: 8px; }
+.ref-item {
+  display: flex; gap: 10px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  text-decoration: none; color: var(--ink);
+  transition: all .15s ease;
+}
+.ref-item:hover {
+  border-color: var(--ocean-3);
+  transform: translateY(-1px);
+  box-shadow: 0 3px 10px rgba(1, 73, 124, .1);
+}
+.ref-icon {
+  flex-shrink: 0;
+  width: 34px; height: 34px; border-radius: 10px;
+  background: linear-gradient(135deg, #e8f4fc, #d6ebf8);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+}
+.ref-body { flex: 1; min-width: 0; }
+.ref-head {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 3px;
+}
+.ref-source {
+  font-size: 12.5px; font-weight: 700; color: var(--ocean-2);
+}
+.ref-stars {
+  color: #ffb703; font-size: 11px; letter-spacing: 1px;
+}
+.ref-note {
+  font-size: 12px; line-height: 1.5; color: var(--ink-2);
+  margin-bottom: 4px;
+}
+.ref-url {
+  font-size: 10.5px; color: var(--ocean-3);
+  font-family: "SF Mono", "Consolas", monospace;
+  word-break: break-all;
+}
+.refs-disclaimer {
+  margin-top: 8px; font-size: 10.5px;
+  color: var(--muted); font-style: italic;
+  text-align: right;
+}
+
+/* User review source link inside review card */
+.review-source {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  color: var(--ocean-3);
+  text-decoration: none;
+  padding: 3px 10px;
+  background: #eaf4fb;
+  border-radius: 99px;
+}
+.review-source:hover { background: #d6ebf8; }
+
+/* Source URL fields in review form */
+.source-fields {
+  display: flex; gap: 6px; flex-direction: column;
+  margin-bottom: 10px;
+}
+.source-fields input {
+  font-size: 12px;
+}
+
+/* ---------- Map reference indicator status bar ---------- */
+#status b { color: var(--ocean-2); }
+#status a {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 3px 10px;
+  background: var(--ocean-3);
+  color: #fff !important;
+  text-decoration: none !important;
+  border-radius: 99px;
+  font-size: 11px; font-weight: 600;
+}
+#status a:hover { background: var(--ocean-2); }
+
 /* ---------- Access (Transport) ---------- */
 .access-badge {
   display: inline-flex; align-items: center; gap: 3px;
