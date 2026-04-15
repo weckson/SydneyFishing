@@ -703,6 +703,13 @@ function showDetail(id) {
 
     <div class="detail-body">
       <section>
+        <h4>当前海况 · Live Conditions</h4>
+        <div class="spot-conditions" id="spotConditions">
+          <div class="spot-conditions-loading">海况加载中… · Loading conditions at ${escapeHtml(s.nameCn)}</div>
+        </div>
+      </section>
+
+      <section>
         <h4>最佳时段 · Best Time</h4>
         <p>${s.bestCn}</p>
         <p class="en">${s.best}</p>
@@ -754,6 +761,17 @@ function showDetail(id) {
   bindRigTabs(s);
   document.getElementById("detail").classList.remove("hidden");
   map.flyTo([s.lat, s.lng], 14, { duration: 0.8 });
+
+  // Load per-spot live conditions (cached 10 min). Async — updates the section when done.
+  fetchSpotConditions(s).then(data => {
+    const box = document.getElementById("spotConditions");
+    if (!box) return;
+    box.innerHTML = renderSpotConditionsHTML(data);
+  }).catch(err => {
+    const box = document.getElementById("spotConditions");
+    if (box) box.innerHTML = `<div class="spot-conditions-loading">海况数据暂不可用 · Conditions unavailable</div>`;
+    console.warn("spot conditions fetch failed", err);
+  });
 }
 
 function tideDisplay(tide) {
@@ -775,9 +793,44 @@ function tideDisplay(tide) {
   return `${arrow} ${phaseLabel}${suffix}`;
 }
 
-function showWeather() {
+// Update the collapsed pill label with the most relevant one-line summary.
+function updateWeatherPillLabel() {
+  const label = document.getElementById("weatherPillLabel");
+  if (!label) return;
+  if (!currentWeather || !currentWeather.weather) {
+    label.textContent = "加载中";
+    return;
+  }
+  const w = currentWeather.weather;
+  const m = currentWeather.marine;
+  const parts = [];
+  if (w.temperature_2m != null) parts.push(`${w.temperature_2m.toFixed(0)}°`);
+  if (m && m.wave_height != null) parts.push(`浪 ${m.wave_height.toFixed(1)}m`);
+  label.textContent = parts.length ? parts.join(" · ") : "海况";
+}
+
+function openWeatherBox() {
   const box = document.getElementById("weatherBox");
-  if (!currentWeather || !currentWeather.weather) { box.classList.add("hidden"); return; }
+  const pill = document.getElementById("weatherPill");
+  if (!box || !pill) return;
+  box.classList.remove("hidden");
+  pill.classList.add("hidden");
+}
+
+function closeWeatherBox() {
+  const box = document.getElementById("weatherBox");
+  const pill = document.getElementById("weatherPill");
+  if (!box || !pill) return;
+  box.classList.add("hidden");
+  pill.classList.remove("hidden");
+}
+
+function showWeather() {
+  // Always render content into the expanded box. Whether box is visible is controlled
+  // by the pill/close button. Also keep the pill label up-to-date.
+  updateWeatherPillLabel();
+  const box = document.getElementById("weatherBox");
+  if (!currentWeather || !currentWeather.weather) { return; }
   const w = currentWeather.weather;
   const m = currentWeather.marine;
   const t = currentWeather.tide;
@@ -812,7 +865,7 @@ function showWeather() {
     ${tideText ? `<div class="row tide-row"><span>潮汐 Tide</span><span>${tideText}</span></div>` : ""}
     ${primeTimeBlock}
   `;
-  box.classList.remove("hidden");
+  // Pill visibility is now governed by openWeatherBox / closeWeatherBox, not showWeather itself.
 }
 
 // Small badge shown in the detail hero with today's prime windows.
@@ -893,6 +946,63 @@ async function loadConditionsAt(latLng) {
   currentWeather = { weather, marine, tide };
   conditionsCenterLatLng = latLng;
   showWeather();
+}
+
+// ---------- Per-spot conditions cache (10 min TTL) ----------
+// Keyed by spot id → { weather, marine, tide, fetchedAt }
+const spotConditionsCache = new Map();
+const SPOT_CACHE_TTL_MS = 10 * 60 * 1000;
+
+async function fetchSpotConditions(spot) {
+  const cached = spotConditionsCache.get(spot.id);
+  if (cached && (Date.now() - cached.fetchedAt) < SPOT_CACHE_TTL_MS) {
+    return cached;
+  }
+  const [weather, marine, tide] = await Promise.all([
+    fetchWeather(spot.lat, spot.lng),
+    fetchMarine(spot.lat, spot.lng),
+    fetchTide(spot.lat, spot.lng)
+  ]);
+  const result = { weather, marine, tide, fetchedAt: Date.now() };
+  spotConditionsCache.set(spot.id, result);
+  return result;
+}
+
+// Render the conditions panel for a specific spot (used in the detail modal).
+function renderSpotConditionsHTML(data) {
+  if (!data || !data.weather) {
+    return `<div class="spot-conditions-loading">海况加载中… · Loading conditions</div>`;
+  }
+  const w = data.weather;
+  const m = data.marine;
+  const t = data.tide;
+  const windows = computePrimeWindows(w._daily);
+  const winStatus = currentWindowStatus(windows);
+  const tideText = tideDisplay(t);
+
+  const primeBlock = windows ? `
+    <div class="spot-cond-prime">
+      <div class="spot-cond-prime-header">🎣 今日最佳时段 · Prime Time</div>
+      <div class="spot-cond-prime-rows">
+        <div class="${winStatus === 'dawn' ? 'active' : ''}">🌅 晨 ${formatTime(windows.dawn.start)}–${formatTime(windows.dawn.end)}</div>
+        <div class="${winStatus === 'dusk' ? 'active' : ''}">🌇 昏 ${formatTime(windows.dusk.start)}–${formatTime(windows.dusk.end)}</div>
+      </div>
+      ${winStatus ? `<div class="spot-cond-now">✨ 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
+    </div>
+  ` : "";
+
+  return `
+    <div class="spot-cond-grid">
+      <div><span>🌡 气温</span><b>${w.temperature_2m?.toFixed(1) ?? "-"} °C</b></div>
+      <div><span>💨 风</span><b>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</b></div>
+      <div><span>🌧 降雨</span><b>${w.precipitation?.toFixed(1) ?? 0} mm</b></div>
+      ${m ? `<div><span>🌊 浪高</span><b>${m.wave_height?.toFixed(1) ?? "-"} m</b></div>` : ""}
+      ${m ? `<div><span>⏱ 周期</span><b>${m.wave_period?.toFixed(0) ?? "-"} s</b></div>` : ""}
+      ${tideText ? `<div class="wide"><span>🌀 潮汐</span><b>${tideText}</b></div>` : ""}
+    </div>
+    ${primeBlock}
+    <div class="spot-cond-footnote">数据时间 · Fetched ${new Date(data.fetchedAt).toLocaleTimeString("zh-CN", {hour:"2-digit",minute:"2-digit"})} · 基于钓点坐标实时计算</div>
+  `;
 }
 
 // Update the status bar to reflect whether recommendations are based on user location or map center.
@@ -1243,6 +1353,14 @@ document.addEventListener("DOMContentLoaded", () => {
   loadConditionsAt(mapCenterLatLng).then(() => {
     render();
   });
+  // Weather pill ↔ expanded box toggle
+  document.getElementById("weatherPill")?.addEventListener("click", () => {
+    openWeatherBox();
+  });
+  document.getElementById("weatherBoxClose")?.addEventListener("click", () => {
+    closeWeatherBox();
+  });
+
   document.getElementById("locateBtn").addEventListener("click", locateUser);
   document.getElementById("radiusSel").addEventListener("change", () => {
     drawRadiusCircle();

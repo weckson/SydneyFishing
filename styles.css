@@ -482,6 +482,89 @@ html, body {
   border-radius: 6px;
 }
 
+/* ---------- Per-spot live conditions in detail modal ---------- */
+.spot-conditions {
+  padding: 2px 0;
+}
+.spot-conditions-loading {
+  padding: 18px 14px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 12.5px;
+  font-style: italic;
+  background: #f5f8fb;
+  border: 1px dashed #c7dcec;
+  border-radius: 10px;
+}
+.spot-cond-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.spot-cond-grid > div {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 9px 12px;
+  background: linear-gradient(135deg, #f3f9fd, #eaf4fb);
+  border: 1px solid #c7dcec;
+  border-radius: 10px;
+  font-size: 12px;
+}
+.spot-cond-grid > div.wide { grid-column: 1 / -1; }
+.spot-cond-grid > div span {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+}
+.spot-cond-grid > div b {
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 700;
+}
+.spot-cond-prime {
+  padding: 10px 12px;
+  background: linear-gradient(135deg, #fff8e0, #fff4d0);
+  border: 1px solid #ffd98a;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.spot-cond-prime-header {
+  font-size: 10.5px; font-weight: 700;
+  color: #8a5a00;
+  text-transform: uppercase; letter-spacing: .4px;
+  margin-bottom: 6px;
+}
+.spot-cond-prime-rows {
+  display: flex; gap: 8px; flex-wrap: wrap;
+  font-size: 12px; font-weight: 600;
+  color: #6b4800;
+}
+.spot-cond-prime-rows > div {
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+.spot-cond-prime-rows > div.active {
+  background: linear-gradient(90deg, rgba(251, 133, 0, .25), rgba(251, 133, 0, .12));
+  color: #8a3700;
+  font-weight: 800;
+}
+.spot-cond-now {
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, .6);
+  border-radius: 6px;
+  font-size: 11px; font-weight: 700;
+  color: #e08900;
+  text-align: center;
+}
+.spot-cond-footnote {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-align: right;
+  font-style: italic;
+  margin-top: 4px;
+}
+
 /* ---------- Prime badge inside detail hero ---------- */
 .prime-badge {
   margin-top: 14px;
@@ -751,12 +834,21 @@ main {
   }
   .topbar-actions { gap: 6px; }
 
+  /* Weather pill on mobile */
+  .weather-pill {
+    top: 10px !important;
+    right: 10px !important;
+    padding: 8px 12px 8px 10px;
+  }
+  .weather-pill-icon { font-size: 18px; }
+  .weather-pill-label { font-size: 11px; }
+
   /* Weather box smaller and farther from edges */
   .weather-box {
     top: 10px !important;
     right: 10px !important;
     min-width: auto;
-    max-width: 58%;
+    max-width: 62%;
     font-size: 11px;
     padding: 10px 12px;
     border-radius: 12px;
@@ -1047,26 +1139,93 @@ main {
   border-bottom: 1px solid currentColor; padding-bottom: 1px;
 }
 
-/* ---------- Weather card ---------- */
+/* ---------- Weather pill (collapsed default) ---------- */
+.weather-pill {
+  position: absolute; top: 16px; right: 16px;
+  z-index: 500;
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 14px 10px 12px;
+  background: rgba(255, 255, 255, .92);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  border: 1px solid rgba(255, 255, 255, .7);
+  border-radius: 999px;
+  box-shadow: var(--shadow-md);
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.weather-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-lg);
+  background: rgba(255, 255, 255, 1);
+}
+.weather-pill.hidden { display: none; }
+.weather-pill-icon {
+  font-size: 22px;
+  line-height: 1;
+  animation: waveRoll 3s ease-in-out infinite;
+  display: inline-block;
+}
+@keyframes waveRoll {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  25% { transform: translateY(-1px) rotate(-4deg); }
+  75% { transform: translateY(1px) rotate(4deg); }
+}
+.weather-pill-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--ocean-2);
+  letter-spacing: .2px;
+  white-space: nowrap;
+}
+
+/* ---------- Weather card (expanded) ---------- */
 .weather-box {
   position: absolute; top: 16px; right: 16px;
-  background: rgba(255, 255, 255, .88);
+  background: rgba(255, 255, 255, .92);
   backdrop-filter: saturate(180%) blur(16px);
   -webkit-backdrop-filter: saturate(180%) blur(16px);
   padding: 14px 16px; border-radius: var(--radius);
   box-shadow: var(--shadow-lg);
-  min-width: 200px; font-size: 13px; z-index: 500;
+  min-width: 220px; font-size: 13px; z-index: 500;
   border: 1px solid rgba(255,255,255,.6);
+  animation: weatherBoxIn .25s ease;
+}
+@keyframes weatherBoxIn {
+  from { opacity: 0; transform: translateY(-6px) scale(.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+.weather-box-header {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 10px;
 }
 .weather-box h3 {
   font-size: 11px; font-weight: 700; color: var(--ocean-2);
-  margin-bottom: 10px; text-transform: uppercase; letter-spacing: .6px;
+  margin: 0;
+  text-transform: uppercase; letter-spacing: .6px;
   display: flex; align-items: center; gap: 6px;
 }
 .weather-box h3::before {
   content: ""; width: 6px; height: 6px; border-radius: 50%;
   background: var(--green); box-shadow: 0 0 0 4px rgba(6, 167, 125, .2);
   animation: pulse 2s ease-in-out infinite;
+}
+.weather-box-close {
+  background: transparent;
+  border: 0;
+  width: 22px; height: 22px;
+  border-radius: 50%;
+  font-size: 18px; line-height: 1;
+  color: var(--muted);
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  font-family: inherit;
+  transition: background .15s, color .15s;
+}
+.weather-box-close:hover {
+  background: rgba(0, 30, 60, .08);
+  color: var(--ink);
 }
 @keyframes pulse {
   0%, 100% { box-shadow: 0 0 0 4px rgba(6, 167, 125, .2); }

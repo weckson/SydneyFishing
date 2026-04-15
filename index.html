@@ -107,8 +107,17 @@
       <div class="crosshair-pin">📍</div>
       <div class="crosshair-label" id="crosshairLabel">搜索中心</div>
     </div>
+    <!-- Collapsed weather pill (default state). Shows wave icon + temperature/wave-height quickly. -->
+    <button id="weatherPill" class="weather-pill" aria-label="查看当前海况">
+      <span class="weather-pill-icon">🌊</span>
+      <span class="weather-pill-label" id="weatherPillLabel">--</span>
+    </button>
+    <!-- Expanded weather card (hidden by default). -->
     <div id="weatherBox" class="weather-box hidden">
-      <h3>当前海况 · Live</h3>
+      <div class="weather-box-header">
+        <h3>当前海况 · Live</h3>
+        <button class="weather-box-close" id="weatherBoxClose" aria-label="收起">×</button>
+      </div>
       <div id="weatherContent"></div>
     </div>
   </section>
