@@ -1,0 +1,15 @@
+# Optional local Postgres for development. Run: docker compose up -d
+# Then: cp .env.example .env  (the default DATABASE_URL already points here)
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: sf
+      POSTGRES_PASSWORD: sf
+      POSTGRES_DB: sydneyfishing
+    ports:
+      - "5432:5432"
+    volumes:
+      - sfpg:/var/lib/postgresql/data
+volumes:
+  sfpg: {}

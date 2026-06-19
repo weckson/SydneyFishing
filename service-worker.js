@@ -5,7 +5,7 @@
 // - Open-Meteo weather/marine API → network-first with 10min cache fallback
 // - Leaflet library CDN → cache-first after first load
 
-const CACHE_VERSION = "v1.3.3";
+const CACHE_VERSION = "v1.8.0";
 const SHELL_CACHE = `sf-shell-${CACHE_VERSION}`;
 const TILE_CACHE = `sf-tiles-${CACHE_VERSION}`;
 const API_CACHE = `sf-api-${CACHE_VERSION}`;
@@ -19,6 +19,13 @@ const SHELL_FILES = [
   "./reviews.js",
   "./access.js",
   "./rigs.js",
+  "./seasons.js",
+  "./api.js",
+  "./auth-ui.js",
+  "./pwa-init.js",
+  "./forum.js",
+  "./notify.js",
+  "./insights.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -66,6 +73,10 @@ self.addEventListener("fetch", event => {
   const req = event.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+
+  // The app's own backend API must never be served from cache (reviews/catches change,
+  // and cookie-auth responses must hit the network). Same-origin in prod, cross-origin in dev.
+  if (url.pathname.startsWith("/api/")) return;
 
   // CartoDB tiles — stale-while-revalidate
   if (url.hostname.endsWith("basemaps.cartocdn.com")) {

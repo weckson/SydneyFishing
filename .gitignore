@@ -1,0 +1,10 @@
+# Editor / tooling
+.idea/
+.claude/
+*.log
+
+# Server (deps, secrets, local uploads, env)
+server/node_modules/
+server/uploads/
+server/.env
+node_modules/

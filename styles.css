@@ -1054,6 +1054,11 @@ main {
   background: #eaf4fb; color: var(--ocean-3);
   padding: 2px 7px; border-radius: 6px; font-weight: 600;
 }
+/* In-season species: this month's actual biters get a warm highlight */
+.spot-species .sp-chip.in-season {
+  background: #fff1e0; color: #c2410c;
+  border: 1px solid #fdba74;
+}
 
 .score-box {
   flex-shrink: 0; text-align: right; min-width: 52px;
@@ -1295,6 +1300,10 @@ main {
   border: 1px solid rgba(255, 255, 255, .25);
   backdrop-filter: blur(4px);
 }
+.chip.in-season {
+  background: rgba(255, 183, 3, .35);
+  border-color: rgba(255, 209, 102, .8);
+}
 .detail-score {
   display: flex; align-items: center; gap: 12px;
   margin-top: 4px;
@@ -1335,6 +1344,12 @@ main {
 .detail-body ul { padding-left: 18px; }
 .detail-body ul li { margin-bottom: 3px; }
 
+.why-note {
+  font-size: 10.5px;
+  color: var(--muted);
+  font-style: italic;
+  margin: -4px 0 8px;
+}
 .reason-list { list-style: none; padding: 0; }
 .reason-list li {
   background: linear-gradient(135deg, #f1f8fc, #e8f4fc);
@@ -1368,3 +1383,242 @@ main {
 
 /* ---------- Utilities ---------- */
 .hidden { display: none !important; }
+
+/* ============ Auth (v1.5) ============ */
+.auth-btn { display: inline-flex; align-items: center; gap: 4px; }
+.auth-btn.authed { color: var(--gold); border-color: var(--gold); }
+
+.auth-modal {
+  position: fixed; inset: 0; z-index: 1200;
+  background: rgba(3, 20, 40, .55); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.auth-modal.hidden { display: none; }
+.auth-card {
+  position: relative; width: 100%; max-width: 360px;
+  background: var(--card); border-radius: var(--radius);
+  box-shadow: var(--shadow-lg); padding: 24px 20px 18px;
+}
+.auth-card .close {
+  position: absolute; top: 8px; right: 10px; border: none; background: none;
+  font-size: 24px; color: var(--muted); cursor: pointer; line-height: 1;
+}
+.auth-title { font-size: 18px; color: var(--ocean-2); margin-bottom: 4px; }
+.auth-sub { font-size: 11.5px; color: var(--muted); margin-bottom: 14px; }
+.auth-tabs { display: flex; gap: 6px; margin-bottom: 12px; }
+.auth-tab {
+  flex: 1; padding: 8px; border: 1px solid var(--line); background: var(--bg);
+  border-radius: var(--radius-sm); font-weight: 600; font-size: 13px; color: var(--muted); cursor: pointer;
+}
+.auth-tab.active { background: var(--ocean-3); color: #fff; border-color: var(--ocean-3); }
+.auth-input {
+  width: 100%; padding: 10px 12px; margin-bottom: 10px; font-size: 14px;
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg);
+}
+.auth-input:focus { outline: none; border-color: var(--ocean-3); background: #fff; }
+.auth-submit {
+  width: 100%; padding: 11px; border: none; border-radius: var(--radius-sm);
+  background: var(--ocean-3); color: #fff; font-weight: 700; font-size: 14px; cursor: pointer;
+}
+.auth-submit:disabled { opacity: .6; cursor: default; }
+.auth-err { color: var(--coral); font-size: 12px; min-height: 16px; margin-bottom: 6px; }
+.auth-note { font-size: 10.5px; color: var(--muted); text-align: center; margin-top: 10px; }
+
+.auth-menu {
+  position: absolute; top: 46px; right: 8px; z-index: 1100;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-lg); min-width: 180px; overflow: hidden;
+}
+.auth-menu-user { padding: 10px 12px; font-size: 12px; color: var(--muted); border-bottom: 1px solid var(--line); word-break: break-all; }
+.auth-menu-item { width: 100%; text-align: left; padding: 10px 12px; border: none; background: none; font-size: 13px; color: var(--ink-2); cursor: pointer; }
+.auth-menu-item:hover { background: var(--bg); }
+
+.auth-needed { font-size: 12.5px; color: var(--muted); margin: 4px 0 10px; }
+.auth-cta, .import-cta {
+  display: inline-block; padding: 9px 14px; border: none; border-radius: var(--radius-sm);
+  background: var(--ocean-3); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer;
+}
+.import-cta { background: var(--gold); color: var(--ocean-1); margin-top: 8px; }
+
+/* ============ Catch reports (v1.5) ============ */
+.catch-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+.catch-loading, .reviews-loading { font-size: 12px; color: var(--muted); padding: 4px 0; }
+.catch-item {
+  background: linear-gradient(135deg, #f1f8fc, #eaf4fc);
+  border-left: 3px solid var(--ocean-4); border-radius: 0 10px 10px 0; padding: 9px 12px;
+}
+.catch-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.catch-species { font-weight: 700; color: var(--ocean-2); font-size: 13px; }
+.catch-size { font-size: 12px; color: var(--ink-2); }
+.catch-notes { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+.catch-meta { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+.catch-foot { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--muted); margin-top: 5px; }
+
+.catch-form { background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; }
+.catch-form h5 { font-size: 13px; color: var(--ocean-2); margin-bottom: 10px; }
+.catch-row { display: flex; gap: 8px; margin-bottom: 8px; }
+.catch-row > * { flex: 1; min-width: 0; }
+.catch-form input, .catch-form select, .catch-form textarea {
+  width: 100%; padding: 8px 10px; font-size: 13px; border: 1px solid var(--line);
+  border-radius: 8px; background: #fff;
+}
+.catch-form textarea { min-height: 56px; resize: vertical; margin-bottom: 8px; }
+.catch-submit {
+  width: 100%; padding: 10px; border: none; border-radius: 8px;
+  background: var(--ocean-4); color: #fff; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.catch-submit:disabled { opacity: .6; cursor: default; }
+.catch-hint, .catch-note { font-size: 10.5px; color: var(--muted); margin-top: 6px; line-height: 1.5; }
+
+/* ---- Catch photos (v1.5.1) ---- */
+.ct-photo-label {
+  display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+  font-size: 12.5px; color: var(--ocean-3); font-weight: 600; margin-bottom: 8px;
+}
+.ct-photo-label input[type=file] { font-size: 11px; color: var(--muted); }
+.ct-photo-preview:not(:empty) { margin-bottom: 8px; }
+.ct-photo-preview img { max-height: 90px; border-radius: 8px; border: 1px solid var(--line); }
+.catch-photo { display: inline-block; margin-top: 6px; }
+.catch-photo img {
+  max-width: 100%; max-height: 200px; border-radius: 8px;
+  border: 1px solid var(--line); display: block;
+}
+
+/* ============ Community forum (v1.7) ============ */
+.forum-view {
+  position: fixed; inset: 0; z-index: 1500; background: var(--bg);
+  display: flex; flex-direction: column;
+}
+.forum-view.hidden { display: none; }
+.forum-inner { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; display: flex; flex-direction: column; }
+.forum-loading, .forum-empty, .forum-error { padding: 30px 18px; color: var(--muted); text-align: center; font-size: 13px; }
+.forum-error { color: var(--coral); }
+
+.forum-bar {
+  position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 10px;
+  padding: 12px 14px; background: var(--ocean-2); color: #fff; box-shadow: var(--shadow-sm);
+}
+.forum-back, .forum-close {
+  background: rgba(255,255,255,.16); border: none; color: #fff; width: 32px; height: 32px;
+  border-radius: 8px; font-size: 18px; cursor: pointer; flex-shrink: 0; line-height: 1;
+}
+.forum-logo { font-size: 20px; }
+.forum-title { flex: 1; font-weight: 700; font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* boards */
+.board-list { padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.board-card {
+  text-align: left; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  padding: 14px; cursor: pointer; box-shadow: var(--shadow-sm); position: relative;
+}
+.board-card:hover { border-color: var(--ocean-3); }
+.board-name { font-weight: 700; color: var(--ocean-2); font-size: 15px; }
+.board-en { font-weight: 400; color: var(--muted); font-size: 11px; }
+.board-desc { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.board-count { position: absolute; top: 14px; right: 14px; font-size: 11px; color: var(--muted); }
+
+/* thread list */
+.thread-list { padding: 8px 0 80px; }
+.thread-row {
+  width: 100%; text-align: left; background: var(--card); border: none; border-bottom: 1px solid var(--line);
+  padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 12px;
+}
+.thread-row:hover { background: #f7fafd; }
+.thread-row-main { flex: 1; min-width: 0; }
+.thread-row-title { font-weight: 600; color: var(--ink); font-size: 14px; }
+.thread-row-meta { font-size: 11px; color: var(--muted); margin-top: 3px; }
+.thread-row-stats { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: var(--muted); text-align: right; flex-shrink: 0; }
+
+.forum-fab {
+  position: fixed; right: 18px; bottom: 22px; z-index: 3; border: none; cursor: pointer;
+  background: var(--gold); color: var(--ocean-1); font-weight: 700; font-size: 14px;
+  padding: 12px 18px; border-radius: 30px; box-shadow: var(--shadow-lg);
+}
+
+/* thread detail */
+.thread-detail { padding: 14px 16px 40px; max-width: 760px; width: 100%; margin: 0 auto; }
+.thread-head h2 { font-size: 18px; color: var(--ocean-1); line-height: 1.35; }
+.thread-head-meta { font-size: 11.5px; color: var(--muted); margin: 6px 0 8px; }
+.thread-actions, .post-actions { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.thread-actions { padding-bottom: 12px; border-bottom: 2px solid var(--line); margin-bottom: 6px; }
+.act-like, .act-share, .act-report, .act-del {
+  border: 1px solid var(--line); background: var(--card); color: var(--ink-2);
+  font-size: 12px; padding: 5px 10px; border-radius: 20px; cursor: pointer;
+}
+.act-like.liked { background: #fff1e0; border-color: #fdba74; color: #c2410c; font-weight: 600; }
+.act-del { color: var(--coral); }
+
+.post-list { display: flex; flex-direction: column; }
+.post-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+.post-item.op { background: linear-gradient(180deg,#f4fafe,transparent); padding: 12px; border-radius: 10px; border-bottom: none; margin-bottom: 4px; }
+.post-meta { display: flex; align-items: center; gap: 8px; font-size: 11.5px; color: var(--muted); margin-bottom: 6px; }
+.post-author { font-weight: 600; color: var(--ocean-3); }
+.op-badge { background: var(--ocean-3); color: #fff; border-radius: 4px; padding: 1px 5px; font-size: 10px; }
+.post-date { margin-left: auto; }
+.post-body { font-size: 14px; color: var(--ink); line-height: 1.6; word-break: break-word; }
+.post-actions { margin-top: 8px; }
+
+.reply-box { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.reply-box textarea {
+  width: 100%; min-height: 70px; padding: 10px 12px; font-size: 14px; resize: vertical;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card);
+}
+.thread-locked { margin-top: 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.btn-primary { align-self: flex-start; border: none; background: var(--ocean-3); color: #fff; font-weight: 700; font-size: 13px; padding: 9px 18px; border-radius: 8px; cursor: pointer; }
+.btn-primary:disabled { opacity: .6; }
+.btn-ghost { border: 1px solid var(--line); background: var(--card); color: var(--ink-2); padding: 9px 16px; border-radius: 8px; cursor: pointer; }
+
+/* composer modal (over the forum view) */
+.forum-modal { position: fixed; inset: 0; z-index: 1600; background: rgba(3,20,40,.5); display: flex; align-items: center; justify-content: center; padding: 18px; }
+.forum-compose { width: 100%; max-width: 460px; background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: var(--shadow-lg); }
+.forum-compose h3 { font-size: 16px; color: var(--ocean-2); margin-bottom: 12px; }
+.forum-compose input, .forum-compose textarea { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; margin-bottom: 10px; background: var(--bg); }
+.forum-compose textarea { min-height: 140px; resize: vertical; }
+.forum-compose-actions { display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ============ v1.8: notifications + insights + multi-photo ============ */
+/* notifications bell */
+.notify-btn { position: relative; }
+.notify-badge {
+  position: absolute; top: 2px; right: 2px; background: var(--coral); color: #fff;
+  font-size: 9px; font-weight: 700; min-width: 15px; height: 15px; line-height: 15px;
+  border-radius: 8px; padding: 0 3px; text-align: center;
+}
+.notify-panel {
+  position: absolute; top: 46px; right: 8px; z-index: 1100; width: 290px; max-height: 70vh; overflow-y: auto;
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+}
+.notify-head { display: flex; justify-content: space-between; align-items: center; padding: 10px 12px; border-bottom: 1px solid var(--line); font-size: 12px; font-weight: 700; color: var(--ocean-2); }
+.notify-head button { border: none; background: none; color: var(--ocean-3); font-size: 12px; cursor: pointer; }
+.notify-loading, .notify-empty { padding: 18px; text-align: center; color: var(--muted); font-size: 12px; }
+.notify-item { display: block; width: 100%; text-align: left; border: none; background: none; border-bottom: 1px solid var(--line); padding: 10px 12px; cursor: pointer; }
+.notify-item:hover { background: var(--bg); }
+.notify-item.unread { background: #eef7ff; }
+.notify-text { font-size: 13px; color: var(--ink); }
+.notify-sub { font-size: 11px; color: var(--muted); margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* insights / 鱼讯 */
+.ins-loading, .ins-empty { padding: 24px 16px; text-align: center; color: var(--muted); font-size: 13px; }
+.ins-body { padding: 14px 16px 50px; max-width: 760px; width: 100%; margin: 0 auto; }
+.ins-stat { font-size: 13px; color: var(--ink-2); margin-bottom: 14px; }
+.ins-stat b { color: var(--ocean-2); font-size: 17px; }
+.ins-section { margin-bottom: 22px; }
+.ins-section h3 { font-size: 14px; color: var(--ocean-2); margin-bottom: 10px; }
+.ins-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.ins-bar-label { width: 90px; flex-shrink: 0; font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ins-bar-track { flex: 1; height: 16px; background: var(--line); border-radius: 8px; overflow: hidden; }
+.ins-bar-fill { height: 100%; background: linear-gradient(90deg, var(--ocean-3), var(--teal)); border-radius: 8px; }
+.ins-bar-n { width: 28px; text-align: right; font-size: 12px; color: var(--muted); }
+.ins-catch-list { display: flex; flex-direction: column; gap: 8px; }
+.ins-catch { display: flex; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px; }
+.ins-catch-img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; flex-shrink: 0; }
+.ins-catch-body { min-width: 0; }
+.ins-catch-top { font-size: 13px; color: var(--ink); }
+.ins-catch-size { font-size: 12px; color: var(--muted); }
+.ins-catch-sub { font-size: 11.5px; color: var(--muted); margin-top: 3px; }
+
+/* multi-photo gallery in catch list */
+.catch-photos { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
+.catch-photos .catch-photo { margin-top: 0; }
+.catch-photos .catch-photo img { max-height: 120px; max-width: 140px; object-fit: cover; }
+.ct-photo-preview { display: flex; gap: 6px; flex-wrap: wrap; }
