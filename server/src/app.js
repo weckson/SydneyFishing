@@ -19,7 +19,9 @@ import insightsRoutes from "./routes/insights.routes.js";
 export async function buildApp() {
   const app = Fastify({
     logger: { level: config.isProd ? "info" : "debug" },
-    trustProxy: config.isProd,
+    // Trust an exact number of proxy hops (CloudFront/LB) so X-Forwarded-For can't be spoofed
+    // to evade IP rate limits. 0 in dev (direct), 1 in prod by default.
+    trustProxy: config.trustProxyHops,
     bodyLimit: 1_000_000 // 1 MB JSON (photos go via separate upload later, not JSON)
   });
 
@@ -57,7 +59,7 @@ export async function buildApp() {
   app.get("/healthz", async () => ({ ok: true, service: "sydney-fishing-api", env: config.env }));
   app.get("/readyz", async (req, reply) => {
     try { await pingDb(); return { ok: true, db: "up" }; }
-    catch (e) { reply.code(503); return { ok: false, db: "down", error: e.message }; }
+    catch (e) { req.log.error("readyz db check failed: " + e.message); reply.code(503); return { ok: false, db: "down" }; }
   });
 
   // ---- API routes ----

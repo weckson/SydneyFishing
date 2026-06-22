@@ -92,8 +92,9 @@
       }
       return data; // { id, thumb, full }  (paths relative to the API origin)
     },
-    // Turn an API-relative media path into an absolute URL the <img> can load.
-    mediaUrl(path) { return path ? API_BASE + path : ""; },
+    // Resolve a media path to a loadable URL. Absolute (R2/CDN) passes through; API-relative
+    // (local-disk driver) gets the API origin prepended.
+    mediaUrl(path) { return path ? (/^https?:\/\//.test(path) ? path : API_BASE + path) : ""; },
 
     // forum
     forumCategories() { return req("/api/forum/categories"); },

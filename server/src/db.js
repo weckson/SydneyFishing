@@ -5,6 +5,9 @@ import { config } from "./config.js";
 // (and answer /healthz) even if Postgres is momentarily down.
 export const pool = new pg.Pool({
   connectionString: config.databaseUrl,
+  // Managed Postgres (Lightsail/RDS) requires TLS. rejectUnauthorized is relaxed by default
+  // for managed certs; set PGSSL_STRICT=true once you bundle the provider CA.
+  ssl: config.pgSsl ? { rejectUnauthorized: config.pgSslStrict } : false,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 5000

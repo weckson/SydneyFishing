@@ -1,8 +1,9 @@
 import { query } from "./db.js";
+import { publicUrl } from "./storage.js";
 
-// Build a public photo object from a media storage_key.
+// Build a public photo object from a media storage_key (URL shape depends on the storage driver).
 export function photoFor(key) {
-  return key ? { thumb: `/uploads/${key}_thumb.webp`, full: `/uploads/${key}_lg.webp` } : null;
+  return key ? { thumb: publicUrl(`${key}_thumb.webp`), full: publicUrl(`${key}_lg.webp`) } : null;
 }
 
 // Attach a `photos` array to each catch row via one follow-up query (portable: no correlated

@@ -14,8 +14,10 @@ async function issueVerification(req, userId, email) {
   const token = crypto.randomBytes(24).toString("base64url");
   const expires = new Date(Date.now() + 24 * 3600 * 1000);
   await query(`INSERT INTO email_verifications (token, user_id, expires_at) VALUES ($1,$2,$3)`, [token, userId, expires]);
-  const proto = (req.headers["x-forwarded-proto"] || req.protocol || "http");
-  const url = `${proto}://${req.headers.host}/api/auth/verify?token=${token}`;
+  // Prefer the configured canonical base URL; fall back to request host only in dev.
+  const base = config.publicBaseUrl ||
+    `${req.headers["x-forwarded-proto"] || req.protocol || "http"}://${req.headers.host}`;
+  const url = `${base}/api/auth/verify?token=${token}`;
   await sendVerificationEmail(email, url);
   return url;
 }

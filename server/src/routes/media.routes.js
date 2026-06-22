@@ -31,7 +31,8 @@ export default async function mediaRoutes(app) {
 
     let large, thumb, meta;
     try {
-      const base = sharp(buf, { failOn: "none" }).rotate(); // auto-orient, then drop the tag
+      // limitInputPixels caps decoded size (~50MP) to reject decompression-bomb images.
+      const base = sharp(buf, { failOn: "none", limitInputPixels: 50_000_000 }).rotate(); // auto-orient, then drop the tag
       meta = await base.metadata();
       large = await base.clone()
         .resize({ width: 1280, height: 1280, fit: "inside", withoutEnlargement: true })
