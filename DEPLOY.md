@@ -7,6 +7,42 @@
 
 ---
 
+## 🚀 软启动模式 · Soft launch (cheapest, lowest risk)
+
+`feature/soft-launch` 分支默认**关掉两个功能**,让你不配 R2、不配 SES、不买付费天气就能便宜上线试用:
+
+| 功能 | 软启动 | 说明 |
+|---|---|---|
+| 图片上传 `FEATURE_PHOTOS` | **关** | 去掉公开上线的图片审核(CSAM)硬门槛;不需要 R2/§6,无图片流量费 |
+| 邮箱验证 `FEATURE_EMAIL_VERIFY` | **关** | 不需要 SES/§8 |
+| 钓获(纯文字)/评论/论坛/鱼讯 | 开 | 让大家试用的核心 |
+
+**软启动只需这些环境变量**(其余 §2 的 R2/SES 变量都不用设):
+```
+NODE_ENV=production
+PORT=3000
+DATABASE_URL=postgres://<user>:<pw>@<endpoint>:5432/<db>?sslmode=require
+COOKIE_SECRET=<§4 生成>
+CORS_ORIGINS=https://your-domain,https://www.your-domain
+PUBLIC_BASE_URL=https://api.your-domain
+TRUST_PROXY_HOPS=1
+# 功能开关(本分支默认就是这样,可不写;要开回来改成 true)
+FEATURE_PHOTOS=false
+FEATURE_EMAIL_VERIFY=false
+```
+- CSP(§5):软启动不用 R2,`img-src` 去掉 `media.` 那项即可;`connect-src` 仍需 API 域 + Open-Meteo。
+- 服务端会**真正关闭**被禁用功能的接口(不只是藏 UI),PWA 通过 `GET /api/meta` 自动隐藏入口。
+- 跳过 §3 也行:想最省可让容器用 `@fastify/static` 直接服务 PWA(单机一个容器),省掉 S3+CloudFront。
+
+**软启动月成本**:Lightsail 容器 Micro(~AUD16)+ Postgres Standard(~AUD23)+ 域名 ≈ **AUD 40/月**,无 R2/SES/付费天气。
+> 绝对最省(更费心):用一台 Lightsail **VM 实例** $5–10/月,自己装 Node+Postgres+Caddy(自动 TLS),全放一台。省钱但要自己运维补丁/备份。
+
+**准备好全量上线时**:把 `FEATURE_PHOTOS`/`FEATURE_EMAIL_VERIFY` 改 `true`,按 §6 配 R2、§8 配 SES,并先补上"图片审核 + 隐私政策"(§12)。
+
+> ⚠️ 软启动期文字论坛**没有删帖后台**:小范围试用可接受(必要时直接在库里软删那条);要稳一点我可以加个"管理员可删任意帖"的最小能力。
+
+---
+
 ## 0. 先定 Open-Meteo(阻塞决策)
 
 PWA 目前直接从浏览器调用 `api.open-meteo.com` / `marine-api.open-meteo.com` 做评分。

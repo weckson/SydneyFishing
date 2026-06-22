@@ -62,12 +62,13 @@
     const menu = document.createElement("div");
     menu.id = "authMenu";
     menu.className = "auth-menu";
+    const emailVerifyOn = !(window.SF_API.features && window.SF_API.features.emailVerify === false);
     const who = document.createElement("div");
     who.className = "auth-menu-user";
-    who.textContent = user.email + (user.emailVerified ? " ✓" : " · 未验证");
+    who.textContent = user.email + (!emailVerifyOn ? "" : (user.emailVerified ? " ✓" : " · 未验证"));
     menu.append(who);
 
-    if (!user.emailVerified) {
+    if (emailVerifyOn && !user.emailVerified) {
       const verify = document.createElement("button");
       verify.className = "auth-menu-item";
       verify.textContent = "✉️ 验证邮箱 · Verify email";

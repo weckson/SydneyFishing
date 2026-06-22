@@ -57,19 +57,27 @@ export async function buildApp() {
 
   // ---- health ----
   app.get("/healthz", async () => ({ ok: true, service: "sydney-fishing-api", env: config.env }));
+
+  // ---- public feature flags (the PWA reads these to hide disabled features) ----
+  app.get("/api/meta", async () => ({ features: config.features }));
   app.get("/readyz", async (req, reply) => {
     try { await pingDb(); return { ok: true, db: "up" }; }
     catch (e) { req.log.error("readyz db check failed: " + e.message); reply.code(503); return { ok: false, db: "down" }; }
   });
 
   // ---- API routes ----
+  // Auth is always on; other route groups are gated by feature flags (disabled features
+  // simply don't expose their endpoints, so the server enforces the gate, not just the UI).
+  const F = config.features;
   await app.register(authRoutes, { prefix: "/api/auth" });
-  await app.register(reviewRoutes, { prefix: "/api/reviews" });
-  await app.register(catchRoutes, { prefix: "/api/catches" });
-  await app.register(mediaRoutes, { prefix: "/api/media" });
-  await app.register(forumRoutes, { prefix: "/api/forum" });
-  await app.register(notificationRoutes, { prefix: "/api/notifications" });
-  await app.register(insightsRoutes, { prefix: "/api/insights" });
+  if (F.reviews) await app.register(reviewRoutes, { prefix: "/api/reviews" });
+  if (F.catches) await app.register(catchRoutes, { prefix: "/api/catches" });
+  if (F.photos) await app.register(mediaRoutes, { prefix: "/api/media" });
+  if (F.forum) {
+    await app.register(forumRoutes, { prefix: "/api/forum" });
+    await app.register(notificationRoutes, { prefix: "/api/notifications" });
+  }
+  if (F.insights) await app.register(insightsRoutes, { prefix: "/api/insights" });
 
   return app;
 }

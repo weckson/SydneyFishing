@@ -975,6 +975,20 @@ function typeIcon(t) {
 // catch-report form and (b) re-render it when auth state changes.
 let currentDetail = { spotId: null, snapshot: null };
 
+// Hide entry points for features disabled via server flags (GET /api/meta). Server also
+// enforces the gate, so this is purely to avoid showing dead UI.
+function applyFeatureGates() {
+  const f = (window.SF_API && window.SF_API.features) || {};
+  const setHidden = (id, hidden) => { const el = document.getElementById(id); if (el) el.style.display = hidden ? "none" : ""; };
+  setHidden("communityBtn", f.forum === false);
+  setHidden("insightsBtn", f.insights === false);
+  if (f.forum === false) setHidden("notifyBtn", true);
+}
+function featureOn(name) {
+  const f = (window.SF_API && window.SF_API.features) || {};
+  return f[name] !== false;
+}
+
 function showDetail(id) {
   const entry = sortedSpots.find(e => e.spot.id === id);
   if (!entry) return;
@@ -1037,16 +1051,16 @@ function showDetail(id) {
         <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank">🧭 在 Google 地图打开路线</a>
       </section>
 
-      <section>
+      ${featureOn("catches") ? `<section>
         <h4>钓获记录 · Catch Reports</h4>
         <div class="catch-list" id="catchList"><div class="catch-loading">加载中…</div></div>
         <div id="catchFormArea">${renderCatchFormArea(s)}</div>
-      </section>
+      </section>` : ""}
 
-      <section>
+      ${featureOn("reviews") ? `<section>
         <h4>钓友评论 · Reviews</h4>
         ${renderReviewsSection(s.id)}
-      </section>
+      </section>` : ""}
     </div>
   `;
   // re-bind close button (it's now inside dynamic content)
@@ -1058,12 +1072,10 @@ function showDetail(id) {
     document.getElementById("algoModal").classList.remove("hidden");
   };
   currentDetail = { spotId: s.id, snapshot: entry.snapshot || null };
-  // bind review form + load server reviews
-  bindReviewForm(s.id);
-  loadAndRenderReviews(s.id);
-  // bind catch-report form + load this spot's catches
-  bindCatchForm(s);
-  loadSpotCatches(s.id);
+  // bind review form + load server reviews (when enabled)
+  if (featureOn("reviews")) { bindReviewForm(s.id); loadAndRenderReviews(s.id); }
+  // bind catch-report form + load this spot's catches (when enabled)
+  if (featureOn("catches")) { bindCatchForm(s); loadSpotCatches(s.id); }
   // bind rig tabs
   bindRigTabs(s);
   document.getElementById("detail").classList.remove("hidden");
@@ -1709,13 +1721,14 @@ function renderCatchFormArea(spot) {
         <input id="ct-bait" placeholder="饵料 Bait" maxlength="120" />
       </div>
       <textarea id="ct-notes" maxlength="2000" placeholder="备注 · 当天海况、咬口、心得…"></textarea>
+      ${featureOn("photos") ? `
       <label class="ct-photo-label">
         📷 添加照片（可选，最多 4 张）
         <input id="ct-photo" type="file" accept="image/jpeg,image/png,image/webp" multiple />
       </label>
-      <div id="ct-photo-preview" class="ct-photo-preview"></div>
+      <div id="ct-photo-preview" class="ct-photo-preview"></div>` : ""}
       <button class="catch-submit" id="ct-submit">记录渔获（含当前评分快照）</button>
-      <div class="catch-hint">照片上传时会自动去除 GPS/EXIF 信息以保护隐私。提交会附上此刻的天气/潮汐/评分快照，用于让推荐越来越准。</div>
+      <div class="catch-hint">${featureOn("photos") ? "照片上传时会自动去除 GPS/EXIF 信息以保护隐私。" : ""}提交会附上此刻的天气/潮汐/评分快照，用于让推荐越来越准。</div>
     </div>`;
 }
 
@@ -1992,10 +2005,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (e.target.id === "algoModal") document.getElementById("algoModal").classList.add("hidden");
   });
 
-  // Backend: probe session/availability, then re-render any open detail when auth changes
-  // (so the review/catch forms switch between logged-out and logged-in states live).
+  // Backend: probe session/availability + feature flags, then re-render any open detail when
+  // auth changes (so the review/catch forms switch between logged-out and logged-in states).
   if (window.SF_API) {
-    window.SF_API.init();
+    window.SF_API.init().then(applyFeatureGates);
     window.SF_API.onAuthChange(() => {
       const detail = document.getElementById("detail");
       if (currentDetail.spotId && detail && !detail.classList.contains("hidden")) {

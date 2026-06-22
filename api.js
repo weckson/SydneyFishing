@@ -11,7 +11,10 @@
     : (location.port === "5500" || location.port === "5501" ? "http://localhost:3000" : "");
 
   const listeners = new Set();
-  const state = { user: null, available: false, ready: false };
+  // Default features all-on; the real set comes from GET /api/meta on init (and the server
+  // enforces them regardless, so a stale default can't expose a disabled feature).
+  const DEFAULT_FEATURES = { photos: true, emailVerify: true, catches: true, reviews: true, forum: true, insights: true };
+  const state = { user: null, available: false, ready: false, features: { ...DEFAULT_FEATURES } };
 
   async function req(path, { method = "GET", body } = {}) {
     const res = await fetch(API_BASE + path, {
@@ -40,8 +43,14 @@
     get ready() { return state.ready; },
     onAuthChange(cb) { listeners.add(cb); return () => listeners.delete(cb); },
 
-    // Probe session + backend availability. 401 = backend up, just logged out.
+    get features() { return state.features; },
+
+    // Probe session + backend availability + feature flags. 401 on /me = backend up, logged out.
     async init() {
+      try {
+        const m = await req("/api/meta");
+        if (m && m.features) state.features = { ...DEFAULT_FEATURES, ...m.features };
+      } catch (e) { /* keep defaults */ }
       try {
         const r = await req("/api/auth/me");
         state.user = r.user; state.available = true;

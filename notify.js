@@ -4,17 +4,20 @@
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s || ""));
   const el = (id) => document.getElementById(id);
 
+  // Notifications ride on the forum feature; if it's disabled, the bell stays hidden.
+  const forumOn = () => !(window.SF_API && window.SF_API.features && window.SF_API.features.forum === false);
+
   function setBadge(n) {
     const b = el("notifyBadge");
     const btn = el("notifyBtn");
     if (!b || !btn) return;
-    btn.style.display = (window.SF_API && window.SF_API.user) ? "" : "none";
-    if (n > 0) { b.textContent = n > 99 ? "99+" : String(n); b.style.display = ""; }
+    btn.style.display = (forumOn() && window.SF_API && window.SF_API.user) ? "" : "none";
+    if (n > 0 && forumOn()) { b.textContent = n > 99 ? "99+" : String(n); b.style.display = ""; }
     else { b.style.display = "none"; }
   }
 
   async function refreshBadge() {
-    if (!window.SF_API || !window.SF_API.user) { setBadge(0); return; }
+    if (!forumOn() || !window.SF_API || !window.SF_API.user) { setBadge(0); return; }
     try { const r = await window.SF_API.getUnread(); setBadge(r.unread || 0); }
     catch (e) { /* ignore */ }
   }

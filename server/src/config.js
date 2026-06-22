@@ -5,6 +5,11 @@ const DEV_DATABASE_URL = "postgres://sf:sf@localhost:5432/sydneyfishing";
 
 const isProd = (process.env.NODE_ENV || "development") === "production";
 
+// Feature flags. "false" disables; anything else (or unset) uses the default.
+// SOFT-LAUNCH DEFAULTS on this branch: photos + email verification are OFF (no image
+// moderation / R2 / SES needed). Re-enable any feature by setting its env var to "true".
+const feat = (key, def) => (process.env[key] || (def ? "true" : "false")) !== "false";
+
 export const config = {
   env: process.env.NODE_ENV || "development",
   isProd,
@@ -16,6 +21,15 @@ export const config = {
   cookieSameSite: process.env.COOKIE_SAMESITE || "lax",   // set "none" only if API is on a different site
   requireEmailVerify: (process.env.REQUIRE_EMAIL_VERIFY || "false") === "true",
   sessionTtlDays: 30,
+  // Feature toggles (exposed to the PWA via GET /api/meta; also enforced server-side).
+  features: {
+    photos:      feat("FEATURE_PHOTOS", false),       // soft-launch OFF: avoids image moderation/CSAM + R2 cost
+    emailVerify: feat("FEATURE_EMAIL_VERIFY", false), // soft-launch OFF: no SES needed
+    catches:     feat("FEATURE_CATCHES", true),
+    reviews:     feat("FEATURE_REVIEWS", true),
+    forum:       feat("FEATURE_FORUM", true),
+    insights:    feat("FEATURE_INSIGHTS", true)
+  },
   // Number of proxy hops in front of the app (CloudFront/LB). Used for correct client IP in
   // rate limiting; trusting *all* hops lets clients spoof X-Forwarded-For.
   trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS || (isProd ? "1" : "0"), 10),
