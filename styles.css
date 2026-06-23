@@ -1622,3 +1622,10 @@ main {
 .catch-photos .catch-photo { margin-top: 0; }
 .catch-photos .catch-photo img { max-height: 120px; max-width: 140px; object-fit: cover; }
 .ct-photo-preview { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* UGC moderation delete (owner or admin) */
+.ugc-del {
+  margin-top: 6px; border: 1px solid var(--line); background: var(--card);
+  color: var(--coral); font-size: 11px; padding: 3px 9px; border-radius: 14px; cursor: pointer;
+}
+.ugc-del:hover { background: #fff1f3; border-color: var(--coral); }

@@ -1,5 +1,5 @@
 import { query } from "../db.js";
-import { requireAuth } from "../auth.js";
+import { requireAuth, optionalAuth, isModerator } from "../auth.js";
 import { attachPhotos, photoFor } from "../photos.js";
 
 // A catch report. The client sends conditions_snapshot = the exact factor decomposition
@@ -8,12 +8,13 @@ import { attachPhotos, photoFor } from "../photos.js";
 // Photos are attached as a `photos` array (up to 4) via the shared helper in photos.js.
 
 export default async function catchRoutes(app) {
-  // ---- list public catch reports for a spot ----
+  // ---- list public catch reports for a spot (canDelete computed for the current user) ----
   app.get("/", {
+    preHandler: optionalAuth,
     schema: { querystring: { type: "object", required: ["spotId"], properties: { spotId: { type: "string", maxLength: 80 } } } }
   }, async (req) => {
     const { rows } = await query(
-      `SELECT c.id, c.spot_id, c.species, c.length_cm, c.weight_kg, c.kept, c.released,
+      `SELECT c.id, c.spot_id, c.user_id, c.species, c.length_cm, c.weight_kg, c.kept, c.released,
               c.technique, c.bait, c.notes, c.body_lang, c.caught_at, c.engine_version,
               c.like_count, c.created_at, u.display_name AS user_name
          FROM catch_reports c JOIN users u ON u.id = c.user_id
@@ -21,7 +22,12 @@ export default async function catchRoutes(app) {
         ORDER BY COALESCE(c.caught_at, c.created_at) DESC LIMIT 100`,
       [req.query.spotId]
     );
-    return { catches: await attachPhotos(rows) };
+    const uid = req.user?.id;
+    const mod = isModerator(req.user);
+    const withFlags = (await attachPhotos(rows)).map(({ user_id, ...c }) => ({
+      ...c, canDelete: mod || (uid && String(user_id) === String(uid))
+    }));
+    return { catches: withFlags };
   });
 
   // ---- my catch reports ----
@@ -107,11 +113,9 @@ export default async function catchRoutes(app) {
     preHandler: requireAuth,
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } } }
   }, async (req, reply) => {
-    const r = await query(
-      `UPDATE catch_reports SET deleted_at = now()
-        WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`,
-      [req.params.id, req.user.id]
-    );
+    const r = isModerator(req.user)
+      ? await query(`UPDATE catch_reports SET deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, [req.params.id])
+      : await query(`UPDATE catch_reports SET deleted_at = now() WHERE id = $1 AND user_id = $2 AND deleted_at IS NULL`, [req.params.id, req.user.id]);
     if (r.rowCount === 0) return reply.code(404).send({ error: "not_found" });
     return { ok: true };
   });

@@ -37,8 +37,10 @@ const credSchema = {
 };
 
 const publicUser = u => ({
-  id: u.id, email: u.email, displayName: u.display_name,
-  preferredLang: u.preferred_lang, role: u.role, emailVerified: u.email_verified
+  id: u.id, email: u.email, displayName: u.display_name, preferredLang: u.preferred_lang,
+  // Reflect ADMIN_EMAILS elevation so login/register/me all agree on the role.
+  role: config.adminEmails.includes(String(u.email || "").toLowerCase()) ? "admin" : u.role,
+  emailVerified: u.email_verified
 });
 
 export default async function authRoutes(app) {

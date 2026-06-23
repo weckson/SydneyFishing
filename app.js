@@ -1458,6 +1458,7 @@ function renderUserReview(r) {
       🔗 ${escapeHtml(r.sourceName || "来源")} ↗
     </a>
   ` : "";
+  const delBtn = (r.canDelete && r.id) ? `<button class="ugc-del" data-review-id="${r.id}">删除</button>` : "";
   return `
     <div class="review-item">
       <div class="review-head">
@@ -1472,6 +1473,7 @@ function renderUserReview(r) {
       </div>
       <div class="review-text">${escapeHtml(r.text)}</div>
       ${sourceLink}
+      ${delBtn}
     </div>
   `;
 }
@@ -1645,6 +1647,11 @@ async function loadAndRenderReviews(spotId) {
     listEl.innerHTML = reviews.length
       ? reviews.map(serverReviewHTML).join("")
       : `<div class="no-reviews">还没有评论，来做第一个分享的钓友</div>`;
+    listEl.querySelectorAll(".ugc-del[data-review-id]").forEach(b => b.onclick = async () => {
+      if (!confirm("删除这条评论？")) return;
+      try { await window.SF_API.deleteReview(Number(b.dataset.reviewId)); await loadAndRenderReviews(spotId); }
+      catch (e) { alert(e.message || "删除失败"); }
+    });
   }
   if (sumEl) {
     const all = [...seedRefs, ...reviews];
@@ -1665,7 +1672,8 @@ function serverReviewHTML(r) {
     user: r.user_name || (r.source === "local_import" ? "我（已迁移）" : "钓友"),
     rating: r.rating, text: r.body,
     date: (r.created_at || "").slice(0, 10),
-    sourceName: r.source_name, sourceUrl: r.source_url
+    sourceName: r.source_name, sourceUrl: r.source_url,
+    id: r.id, canDelete: r.canDelete
   });
 }
 
@@ -1742,6 +1750,11 @@ async function loadSpotCatches(spotId) {
     el.innerHTML = catches.length
       ? catches.map(catchItemHTML).join("")
       : `<div class="no-reviews">还没有渔获记录，记录你的第一条</div>`;
+    el.querySelectorAll(".ugc-del[data-catch-id]").forEach(b => b.onclick = async () => {
+      if (!confirm("删除这条渔获？")) return;
+      try { await window.SF_API.deleteCatch(Number(b.dataset.catchId)); await loadSpotCatches(spotId); }
+      catch (e) { alert(e.message || "删除失败"); }
+    });
   } catch (e) { el.innerHTML = ""; }
 }
 
@@ -1767,6 +1780,7 @@ function catchItemHTML(c) {
         <span>${escapeHtml(c.user_name || "钓友")}</span>
         <span>${escapeHtml(date)}${c.engine_version ? ` · 评分快照 v${escapeHtml(c.engine_version)}` : ""}</span>
       </div>
+      ${c.canDelete && c.id ? `<button class="ugc-del" data-catch-id="${c.id}">删除</button>` : ""}
     </div>`;
 }
 

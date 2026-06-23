@@ -5,6 +5,14 @@ import { config } from "./config.js";
 
 export const SESSION_COOKIE = "sf_sid";
 
+// True if the user can moderate (delete any UGC). Role comes from the DB, but ADMIN_EMAILS
+// elevates listed accounts to admin at request time (no DB write needed to bootstrap).
+export function isModerator(user) {
+  if (!user) return false;
+  if (user.role === "admin" || user.role === "moderator") return true;
+  return config.adminEmails.includes(String(user.email || "").toLowerCase());
+}
+
 // ---- password hashing (Argon2id via prebuilt @node-rs/argon2 — no native build step) ----
 export function hashPassword(plain) {
   return argonHash(plain); // argon2id defaults
@@ -44,7 +52,12 @@ export async function userForToken(token) {
   if (!rows[0]) return null;
   // Touch last_used_at (best-effort, non-blocking).
   query(`UPDATE sessions SET last_used_at = now() WHERE token_hash = $1`, [sha256(token)]).catch(() => {});
-  return rows[0];
+  const user = rows[0];
+  // Elevate ADMIN_EMAILS accounts to admin at request time.
+  if (user.role !== "admin" && config.adminEmails.includes(String(user.email || "").toLowerCase())) {
+    user.role = "admin";
+  }
+  return user;
 }
 
 export function setSessionCookie(reply, token, expires) {

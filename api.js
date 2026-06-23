@@ -81,6 +81,7 @@
     getReviews(spotId) { return req(`/api/reviews?spotId=${encodeURIComponent(spotId)}`); },
     addReview(payload) { return req("/api/reviews", { method: "POST", body: payload }); },
     importReviews(items) { return req("/api/reviews/import", { method: "POST", body: { items } }); },
+    deleteReview(id) { return req(`/api/reviews/${encodeURIComponent(id)}`, { method: "DELETE" }); },
 
     // catch reports
     getCatches(spotId) { return req(`/api/catches?spotId=${encodeURIComponent(spotId)}`); },

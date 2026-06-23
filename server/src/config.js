@@ -19,6 +19,9 @@ export const config = {
     .split(",").map(s => s.trim()).filter(Boolean),
   cookieSecret: process.env.COOKIE_SECRET || DEV_COOKIE_SECRET,
   cookieSameSite: process.env.COOKIE_SAMESITE || "lax",   // set "none" only if API is on a different site
+  // Emails that are treated as admins (can moderate/delete any UGC). Set ADMIN_EMAILS to a
+  // comma-separated list to bootstrap the first moderator without touching the DB.
+  adminEmails: (process.env.ADMIN_EMAILS || "").split(",").map(s => s.trim().toLowerCase()).filter(Boolean),
   requireEmailVerify: (process.env.REQUIRE_EMAIL_VERIFY || "false") === "true",
   sessionTtlDays: 30,
   // Feature toggles (exposed to the PWA via GET /api/meta; also enforced server-side).

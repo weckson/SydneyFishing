@@ -1,24 +1,42 @@
 import crypto from "node:crypto";
 import { query } from "../db.js";
-import { requireAuth, optionalAuth } from "../auth.js";
+import { requireAuth, optionalAuth, isModerator } from "../auth.js";
 
 const importHash = (userId, spotId, date, text) =>
   crypto.createHash("sha256").update([userId, spotId, date, text].join("")).digest("hex");
 
 export default async function reviewRoutes(app) {
-  // ---- list reviews for a spot (public) ----
+  // ---- list reviews for a spot (public; canDelete computed for the current user) ----
   app.get("/", {
+    preHandler: optionalAuth,
     schema: { querystring: { type: "object", required: ["spotId"], properties: { spotId: { type: "string", maxLength: 80 } } } }
   }, async (req) => {
     const { rows } = await query(
-      `SELECT r.id, r.spot_id, r.rating, r.body, r.body_lang, r.source_url, r.source_name,
+      `SELECT r.id, r.spot_id, r.user_id, r.rating, r.body, r.body_lang, r.source_url, r.source_name,
               r.source, r.created_at, u.display_name AS user_name
          FROM reviews r LEFT JOIN users u ON u.id = r.user_id
         WHERE r.spot_id = $1 AND r.deleted_at IS NULL
         ORDER BY r.created_at DESC LIMIT 200`,
       [req.query.spotId]
     );
-    return { reviews: rows };
+    const uid = req.user?.id;
+    const mod = isModerator(req.user);
+    const reviews = rows.map(({ user_id, ...r }) => ({
+      ...r, canDelete: mod || (uid && String(user_id) === String(uid))
+    }));
+    return { reviews };
+  });
+
+  // ---- soft-delete a review (owner or moderator) ----
+  app.delete("/:id", {
+    preHandler: requireAuth,
+    schema: { params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } } }
+  }, async (req, reply) => {
+    const r = isModerator(req.user)
+      ? await query(`UPDATE reviews SET deleted_at=now() WHERE id=$1 AND deleted_at IS NULL`, [req.params.id])
+      : await query(`UPDATE reviews SET deleted_at=now() WHERE id=$1 AND user_id=$2 AND deleted_at IS NULL`, [req.params.id, req.user.id]);
+    if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
+    return { ok: true };
   });
 
   // ---- create a review (auth) ----

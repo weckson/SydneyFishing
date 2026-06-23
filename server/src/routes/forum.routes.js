@@ -1,5 +1,5 @@
 import { query } from "../db.js";
-import { requireAuth, optionalAuth } from "../auth.js";
+import { requireAuth, optionalAuth, isModerator } from "../auth.js";
 
 const REACTABLE = { thread: "forum_threads", post: "forum_posts" };
 
@@ -75,19 +75,21 @@ export default async function forumRoutes(app) {
       [req.params.id]
     );
     const uid = req.user?.id;
+    const mod = isModerator(req.user);
     const liked = await likedSet(uid, thread.id, posts.map(p => p.id));
-    const mine = id2 => uid && String(id2) === String(uid);
+    const canDel = authorId => mod || (uid && String(authorId) === String(uid));
     return {
+      isModerator: mod,
       thread: {
         ...thread,
         liked: liked.has("thread:" + thread.id),
-        canDelete: mine(thread.author_id)
+        canDelete: canDel(thread.author_id)
       },
       posts: posts.map(p => ({
         id: p.id, body: p.body, body_lang: p.body_lang, is_op: p.is_op,
         like_count: p.like_count, created_at: p.created_at, author_name: p.author_name,
         liked: liked.has("post:" + String(p.id)),
-        canDelete: mine(p.author_id)
+        canDelete: canDel(p.author_id)
       }))
     };
   });
@@ -213,7 +215,9 @@ export default async function forumRoutes(app) {
     preHandler: requireAuth,
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } } }
   }, async (req, reply) => {
-    const r = await query(`UPDATE forum_threads SET deleted_at=now() WHERE id=$1 AND author_id=$2 AND deleted_at IS NULL`, [req.params.id, req.user.id]);
+    const r = isModerator(req.user)
+      ? await query(`UPDATE forum_threads SET deleted_at=now() WHERE id=$1 AND deleted_at IS NULL`, [req.params.id])
+      : await query(`UPDATE forum_threads SET deleted_at=now() WHERE id=$1 AND author_id=$2 AND deleted_at IS NULL`, [req.params.id, req.user.id]);
     if (!r.rowCount) return reply.code(404).send({ error: "not_found" });
     return { ok: true };
   });
@@ -221,7 +225,9 @@ export default async function forumRoutes(app) {
     preHandler: requireAuth,
     schema: { params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } } }
   }, async (req, reply) => {
-    const r = await query(`UPDATE forum_posts SET deleted_at=now() WHERE id=$1 AND author_id=$2 AND is_op=false AND deleted_at IS NULL`, [req.params.id, req.user.id]);
+    const r = isModerator(req.user)
+      ? await query(`UPDATE forum_posts SET deleted_at=now() WHERE id=$1 AND is_op=false AND deleted_at IS NULL`, [req.params.id])
+      : await query(`UPDATE forum_posts SET deleted_at=now() WHERE id=$1 AND author_id=$2 AND is_op=false AND deleted_at IS NULL`, [req.params.id, req.user.id]);
     if (!r.rowCount) return reply.code(404).send({ error: "not_found", message: "无法删除（主楼请删整帖）" });
     return { ok: true };
   });
