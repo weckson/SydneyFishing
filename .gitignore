@@ -8,3 +8,9 @@ server/node_modules/
 server/uploads/
 server/.env
 node_modules/
+
+# Production single-box deploy: secrets (root .env) + DB backups — NEVER commit.
+# (.env.example IS still tracked — only the real .env is ignored.)
+.env
+/backups/
+*.sql.gz

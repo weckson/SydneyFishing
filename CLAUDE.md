@@ -51,12 +51,15 @@ auth-ui.js              window.SF_AUTH_UI — login/register modal
 forum.js                community forum view (hash routes #/forum/...)
 notify.js               notifications bell + polling
 insights.js             本周鱼讯 weekly catch insights (#/insights)
+admin.js                moderation panel (#/admin; report triage + takedown, admins only)
 pwa-init.js             SW registration + iOS A2HS hint
 service-worker.js       offline cache (cache-first; bump version on PWA release)
 manifest.json, icons/   PWA manifest + app icons
 styles.css              all styles (single file)
 SCOPE.md                product red lines (READ before features)
-DEPLOY.md               production deploy guide (Lightsail/R2/CloudFront)
+DEPLOY.md               full decoupled deploy (Lightsail container + R2 + CloudFront)
+DEPLOY-budget.md        CHOSEN cheap path: one Lightsail VM, Docker Compose (caddy+api+pg)
+docker-compose.prod.yml prod stack; Dockerfile.caddy + Caddyfile = static edge + TLS + proxy
 
 server/
   src/server.js         boot + graceful shutdown
@@ -68,7 +71,7 @@ server/
   src/photos.js         sharp resize + EXIF/GPS strip
   src/mailer.js         dev-log mailer; SES in prod
   src/migrate.js        applies db/schema.sql (idempotent)
-  src/routes/*.routes.js   auth, reviews, catches, media, forum, notifications, insights
+  src/routes/*.routes.js   auth, reviews, catches, media, forum, notifications, insights, admin
   db/schema.sql         Postgres schema (all CREATE ... IF NOT EXISTS)
   .env.example          copy to .env (gitignored); never commit secrets
 ```
@@ -80,8 +83,10 @@ server/
   `SEASON_SPECIES_WEIGHTS`, `SEED_REVIEWS`, `SF_API`, `SF_AUTH_UI`). `app.js` and
   the view modules define top-level functions in global scope. **`<script>` load
   order in `index.html` is the dependency graph** — data/`api.js`/`auth-ui.js`
-  load before `app.js`, which loads before `forum.js`/`notify.js`/`insights.js`.
-  Adding a file means adding a `<script>` tag in the right position.
+  load before `app.js`, which loads before `forum.js`/`notify.js`/`insights.js`/`admin.js`.
+  Adding a frontend file = add a `<script>` in `index.html` (right position) **and** add it to
+  `SHELL_FILES` in `service-worker.js` (and bump the SW cache version). The prod Caddy image
+  auto-serves any root-level `*.js/*.css/*.html/*.json`, so no deploy-file edit is needed.
 - **Scoring engine (v1.4, in `app.js`).** `scoreSpot(spot, refLoc, cond, mode)`
   returns the 0–100 score plus an immutable factor breakdown. Formula:
 
@@ -124,6 +129,12 @@ server/
   posts`, `reactions`, `forum_reports`, `notifications`, `email_verifications`.
   `spot_id` is the **text id from `spots.js`** (e.g. `bare-island`) — the 205-spot
   dataset is intentionally NOT migrated into the DB.
+- **Moderation:** any signed-in user can report a catch (`POST /api/catches/:id/report`) or a
+  forum thread/post; reports land in the generic `forum_reports` table. `requireAdmin` (role
+  `admin`/`moderator`) gates `/api/admin/*` — list open reports + take down (soft-delete)
+  catches/threads/posts, which also soft-deletes attached media. Bootstrap the first admin with
+  SQL (`UPDATE users SET role='admin' WHERE email=…`); see `DEPLOY-budget.md` §4. Takedowns are
+  soft-deletes (audit/legal-hold) — never hard-delete reported content.
 - API surface: see `server/README.md`.
 
 ## Running locally
@@ -196,6 +207,9 @@ machines, nothing was missed.
 
 ## Deployment
 
-Production target is AWS Lightsail (`ap-southeast-2`) + Cloudflare R2 + CloudFront.
-The full runbook, cost model, and pre-launch security checklist are in `DEPLOY.md`.
-Hard pre-launch gate: **user photos currently have no moderation** — see `DEPLOY.md` §12.
+Live target: **sydneyfishing.au** on **one AWS Lightsail VM (Sydney / ap-southeast-2)** running
+Docker Compose (Caddy + API + Postgres), **same-origin** (no CORS, first-party cookies), photos
+on local disk, **non-commercial** Open-Meteo. Runbook: **`DEPLOY-budget.md`** (the chosen cheap
+path, ≈AUD 8–16/mo). The fuller decoupled stack (managed PG + R2 + CloudFront) stays in `DEPLOY.md`
+for when one box isn't enough. Photo **moderation now ships** (report + admin takedown) — promote
+your account to admin per `DEPLOY-budget.md` §4 before opening photos publicly (`DEPLOY.md` §12).

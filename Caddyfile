@@ -1,0 +1,36 @@
+# Caddy config for the single-box deploy. Auto-provisions + renews Let's Encrypt TLS, serves the
+# static PWA from /srv, and reverse-proxies the API. www is intentionally omitted (single apex A
+# record); to add it: create a www DNS record, add a `www.sydneyfishing.au { redir https://sydneyfishing.au{uri} }`
+# block, and add the www origin to CORS_ORIGINS.
+{
+	email {$ACME_EMAIL}
+}
+
+sydneyfishing.au {
+	encode zstd gzip
+
+	# API, health checks, and user-uploaded images → Fastify backend (same Docker network).
+	@backend path /api/* /uploads/* /healthz /readyz
+	handle @backend {
+		reverse_proxy api:3000
+	}
+
+	# Everything else → the static PWA shell.
+	handle {
+		root * /srv
+		file_server
+	}
+
+	# Revalidate the shell entry + service worker every load so updates land immediately
+	# (the SW is cache-first; without this, new deploys can be masked by a stale SW).
+	@nocache path / /index.html /service-worker.js
+	header @nocache Cache-Control "no-cache"
+
+	# Baseline security headers. The Content-Security-Policy itself lives in index.html.
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+}

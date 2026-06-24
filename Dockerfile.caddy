@@ -1,0 +1,9 @@
+# Static edge image: Caddy serves the repo-root PWA files and reverse-proxies the API.
+# Only known static asset types are copied in (*.js *.html *.css *.json + icons/). Root-level
+# globs naturally EXCLUDE server/, .git, .env and other dotfiles — fail-safe against leaking
+# secrets into the image. Adding a new root-level .js/.css/.html/.json is picked up automatically.
+# Rebuild after a PWA change:  docker compose -f docker-compose.prod.yml build caddy && ... up -d
+FROM caddy:2-alpine
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY *.js *.html *.css *.json /srv/
+COPY icons/ /srv/icons/

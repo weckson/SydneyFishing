@@ -21,9 +21,13 @@ export const config = {
   trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS || (isProd ? "1" : "0"), 10),
   // Canonical base URL of the API, used to build verification links (avoids trusting Host header).
   publicBaseUrl: (process.env.PUBLIC_BASE_URL || "").replace(/\/$/, ""),
-  // Postgres TLS: managed PG (Lightsail/RDS) requires it. rejectUnauthorized defaults to false
-  // for managed-cert compatibility; set PGSSL_STRICT=true once you bundle the provider CA.
-  pgSsl: isProd || /sslmode=require/.test(process.env.DATABASE_URL || ""),
+  // Postgres TLS: managed PG (Lightsail/RDS) requires it; auto-on in prod or when the URL says
+  // sslmode=require. Override with PGSSL=disable for a same-host Postgres on a private Docker
+  // network (single-box deploy — no TLS needed), or PGSSL=require to force it on.
+  // rejectUnauthorized defaults to false for managed certs; PGSSL_STRICT=true once you bundle the CA.
+  pgSsl: (process.env.PGSSL || "").toLowerCase() === "disable" ? false
+       : (process.env.PGSSL || "").toLowerCase() === "require" ? true
+       : (isProd || /sslmode=require/.test(process.env.DATABASE_URL || "")),
   pgSslStrict: (process.env.PGSSL_STRICT || "false") === "true"
 };
 

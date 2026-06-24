@@ -1,0 +1,66 @@
+# Production single-box stack for sydneyfishing.au (AWS Lightsail · Sydney / ap-southeast-2).
+# ONE VM runs everything: Caddy (auto-TLS + static PWA + reverse proxy) + the Fastify API +
+# Postgres. PWA and API share one origin → no CORS, first-party cookies. See DEPLOY-budget.md.
+#
+# Secrets come from a root .env file on the box (gitignored — NEVER commit):
+#   COOKIE_SECRET=<64-hex>   ACME_EMAIL=you@example.com   POSTGRES_PASSWORD=<strong-alphanumeric>
+# Bring it up:  docker compose -f docker-compose.prod.yml up -d --build
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: sf
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: sydneyfishing
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sf -d sydneyfishing"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: ./server
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: "3000"
+      DATABASE_URL: postgres://sf:${POSTGRES_PASSWORD:?}@db:5432/sydneyfishing
+      PGSSL: disable                       # same-host Postgres on a private network → no TLS needed
+      COOKIE_SECRET: ${COOKIE_SECRET:?set COOKIE_SECRET in .env}
+      CORS_ORIGINS: https://sydneyfishing.au
+      PUBLIC_BASE_URL: https://sydneyfishing.au
+      TRUST_PROXY_HOPS: "1"                 # exactly one hop in front: Caddy
+      STORAGE_DRIVER: local                 # user photos on the box's disk (uploads volume)
+      REQUIRE_EMAIL_VERIFY: "false"
+    volumes:
+      - uploads:/app/uploads
+    # Apply the idempotent schema, then start. Safe on every boot.
+    command: ["sh", "-c", "node src/migrate.js && node src/server.js"]
+
+  caddy:
+    build:
+      context: .
+      dockerfile: Dockerfile.caddy
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - caddy_data:/data                   # Let's Encrypt certs/account — MUST persist
+      - caddy_config:/config
+
+volumes:
+  pgdata:
+  uploads:
+  caddy_data:
+  caddy_config:

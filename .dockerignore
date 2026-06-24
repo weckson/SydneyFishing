@@ -1,0 +1,14 @@
+# Build context for the Caddy static image (context = repo root). Keep it lean and ensure
+# secrets/source never reach the image. (The API image builds from ./server with its own
+# server/.dockerignore, so excluding `server` here does not affect it.)
+.git
+.github
+.claude
+node_modules
+server
+backups
+.env
+.env.*
+*.log
+*.md
+docker-compose*.yml
