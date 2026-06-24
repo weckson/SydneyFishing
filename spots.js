@@ -35,7 +35,8 @@ window.SYDNEY_SPOTS = [
     techniques: ["Float fishing with green weed", "Cunjevoi for drummer", "Light unweighted pilchard for bream"],
     tips: "Sheltered bay — good winter drummer and year-round luderick.",
     tipsCn: "海湾较避风，冬季黑毛、全年黑鱼均佳。",
-    prefers: { calm: false, wind: ["W", "NW", "SW"] }
+    prefers: { calm: false, wind: ["W", "NW", "SW"] },
+    marineZone: { sanctuary: true, noteCn: "Bronte–Coogee 水生保护区 · 全面禁捕 (no-take)", noteEn: "Bronte–Coogee Aquatic Reserve — no-take zone, all fishing prohibited", sourceUrl: "https://www.dpi.nsw.gov.au/fishing/marine-protected-areas/aquatic-reserves" }
   },
   {
     id: "long-reef",
@@ -1005,7 +1006,8 @@ window.SYDNEY_SPOTS = [
     techniques: ["Float rig with weed", "Berley bread"],
     tips: "Protected bay between Clovelly & Coogee — very steady bream.",
     tipsCn: "克洛夫利与库吉间避风湾，黑鲷非常稳定。",
-    prefers: { calm: true, wind: ["W", "SW"] }
+    prefers: { calm: true, wind: ["W", "SW"] },
+    marineZone: { sanctuary: true, noteCn: "Bronte–Coogee 水生保护区 · 全面禁捕 (no-take)", noteEn: "Bronte–Coogee Aquatic Reserve — no-take zone, all fishing prohibited", sourceUrl: "https://www.dpi.nsw.gov.au/fishing/marine-protected-areas/aquatic-reserves" }
   },
   {
     id: "shark-point-clovelly", name: "Shark Point, Clovelly", nameCn: "鲨角 · 克洛夫利",
@@ -2094,7 +2096,8 @@ window.SYDNEY_SPOTS = [
     tips: "Cabbage Tree Bay Aquatic Reserve — no-take zone. Catch & release only.",
     tipsCn: "Cabbage Tree Bay 水生保护区，禁捕区，仅可钓放。",
     prefers: { calm: true, wind: ["any"] },
-    preferredTide: "high"
+    preferredTide: "high",
+    marineZone: { sanctuary: true, noteCn: "Cabbage Tree Bay 水生保护区 · 全面禁捕 (no-take)", noteEn: "Cabbage Tree Bay Aquatic Reserve — no-take zone, all fishing prohibited", sourceUrl: "https://www.dpi.nsw.gov.au/fishing/marine-protected-areas/aquatic-reserves" }
   },
   {
     id: "fairy-bower", name: "Fairy Bower, Manly", nameCn: "仙女亭 · 曼利",
@@ -2105,7 +2108,8 @@ window.SYDNEY_SPOTS = [
     tips: "Historic ocean pool rocks. NOTE: part of Cabbage Tree Bay aquatic reserve — check no-take zones.",
     tipsCn: "历史海水泳池旁；注意 Cabbage Tree Bay 保护区禁捕范围。",
     prefers: { calm: true, wind: ["W"] },
-    preferredTide: "rising"
+    preferredTide: "rising",
+    marineZone: { sanctuary: true, noteCn: "Cabbage Tree Bay 水生保护区 · 全面禁捕 (no-take)", noteEn: "Cabbage Tree Bay Aquatic Reserve — no-take zone, all fishing prohibited", sourceUrl: "https://www.dpi.nsw.gov.au/fishing/marine-protected-areas/aquatic-reserves" }
   },
   {
     id: "south-narrabeen", name: "South Narrabeen Beach", nameCn: "南纳拉宾海滩",

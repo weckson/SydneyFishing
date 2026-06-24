@@ -800,6 +800,149 @@ function renderRigsForSpecies(spot, species) {
   return cards + noteHtml;
 }
 
+// ---------- NSW regulations + rock-fishing safety (workstream 1) ----------
+// Look up a species' NSW limits (keyed by the same English names as rigs.js / spot.species).
+function regsForSpecies(species) {
+  return (window.NSW_REGULATIONS && window.NSW_REGULATIONS[species]) || null;
+}
+
+// Compact one-line summary of a species' NSW limits (plain text — caller escapes).
+function regSummaryText(reg) {
+  if (!reg) return "";
+  const parts = [];
+  if (reg.protected) parts.push("🚫 受保护/禁捕 Protected");
+  if (reg.minSizeCm != null) parts.push(`最小 ${reg.minSizeCm}cm`);
+  else if (!reg.protected) parts.push("无最小尺寸 No min size");
+  if (reg.maxSizeCm != null) parts.push(`最大 ${reg.maxSizeCm}cm`);
+  if (reg.bagLimit != null && !reg.protected) parts.push(`每日 ${reg.bagLimit} 尾`);
+  if (reg.closedMonths && reg.closedMonths.length) parts.push("有禁渔期 Closed season");
+  return parts.join(" · ");
+}
+
+// Regulations block for a spot: one row per target species that has reg data, plus any
+// marine-sanctuary warning and the global "verify with DPI / not legal advice" disclaimer.
+function renderRegulationsSection(spot) {
+  if (!window.NSW_REGULATIONS) return "";
+  const meta = window.NSW_REGULATIONS_META || {};
+  const species = (spot.species || []).filter(sp => regsForSpecies(sp));
+  if (!species.length && !(spot.marineZone && spot.marineZone.sanctuary)) return "";
+  const rows = species.map(sp => {
+    const reg = regsForSpecies(sp);
+    return `<div class="reg-row${reg.protected ? " reg-protected" : ""}">
+      <span class="reg-sp">${escapeHtml(reg.nameCn)} <span class="reg-sp-en">${escapeHtml(sp)}</span></span>
+      <span class="reg-vals">${escapeHtml(regSummaryText(reg))}</span>
+    </div>`;
+  }).join("");
+  const mz = (spot.marineZone && spot.marineZone.sanctuary) ? `
+    <div class="reg-sanctuary">🚫 ${escapeHtml(spot.marineZone.noteCn || "禁渔保护区 — 全面禁止采捕")}
+      <span class="en">${escapeHtml(spot.marineZone.noteEn || "Sanctuary (no-take) zone")}</span></div>` : "";
+  const dpi = meta.dpiUrl ? `<a href="${escapeAttr(safeUrl(meta.dpiUrl))}" target="_blank" rel="noopener noreferrer">NSW DPI ↗</a>` : "";
+  return `
+    <section>
+      <h4>NSW 法规 · Rules &amp; Limits</h4>
+      ${mz}
+      <div class="reg-table">${rows}</div>
+      <div class="reg-disclaimer">⚠️ ${escapeHtml(meta.disclaimerCn || "")} · <span class="en">${escapeHtml(meta.disclaimerEn || "")}</span> ${dpi} <span class="reg-updated">更新 ${escapeHtml(meta.lastUpdated || "")}</span></div>
+    </section>`;
+}
+
+// Effective swell the scoring engine uses for rock safety (height weighted by period) —
+// recomputed from the SAME numbers the snapshot froze, so the verdict matches scoreSpot.
+function effectiveWaveM(marine) {
+  if (!marine || marine.waveHeightM == null) return null;
+  const wh = marine.waveHeightM, p = marine.wavePeriodS;
+  const pf = p == null ? 1.0 : p >= 13 ? 1.3 : p >= 11 ? 1.15 : p <= 7 ? 0.85 : 1.0;
+  return wh * pf;
+}
+
+// Rock-fishing go/no-go verdict, derived from the frozen scoring snapshot (no re-fetch).
+// Only meaningful for rock platforms — returns null for other spot types.
+function safetyVerdict(spot, snapshot) {
+  if (!spot || spot.type !== "rock") return null;
+  const w = snapshot && snapshot.weather;
+  const m = snapshot && snapshot.marine;
+  const reasonsCn = [];
+  const order = { green: 0, amber: 1, red: 2 };
+  let level = "green";
+  const bump = (lv) => { if (order[lv] > order[level]) level = lv; };
+
+  if (!w) { bump("amber"); reasonsCn.push("实时气象不可用"); }
+  if (w && w.weatherCode != null && w.weatherCode >= 95) { bump("red"); reasonsCn.push("⛈️ 雷暴"); }
+  if (w && w.windKmh != null) {
+    if (w.windKmh > 35) { bump("red"); reasonsCn.push(`大风 ${Math.round(w.windKmh)}km/h`); }
+    else if (w.windKmh >= 25) { bump("amber"); reasonsCn.push(`风偏大 ${Math.round(w.windKmh)}km/h`); }
+  }
+  if (w && w.precipMm != null && w.precipMm > 2) { bump("amber"); reasonsCn.push("降雨湿滑"); }
+  const eff = effectiveWaveM(m);
+  if (eff != null) {
+    if (eff >= 2) { bump("red"); reasonsCn.push(`涌浪大 ${m.waveHeightM.toFixed(1)}m`); }
+    else if (eff >= 1.2) { bump("amber"); reasonsCn.push(`涌浪中 ${m.waveHeightM.toFixed(1)}m`); }
+  } else if (!m) { bump("amber"); reasonsCn.push("无涌浪数据"); }
+
+  const labels = {
+    green: { cn: "🟢 适宜岩钓", en: "Conditions look OK — stay alert" },
+    amber: { cn: "🟡 谨慎 · 注意安全", en: "Caution — assess carefully" },
+    red:   { cn: "🔴 今天不建议岩钓", en: "Rock fishing not recommended today" }
+  };
+  return { level, labelCn: labels[level].cn, labelEn: labels[level].en, reasonsCn };
+}
+
+// The prominent verdict banner shown on rock-spot detail pages (escaped throughout).
+function renderSafetyVerdict(spot, verdict) {
+  if (!verdict) return "";
+  const sc = window.SAFETY_CONTENT || {};
+  const meta = window.NSW_REGULATIONS_META || {};
+  const reminders = (sc.rockReminders || []).map(r =>
+    `<li>${escapeHtml(r.cn)} · <span class="en">${escapeHtml(r.en)}</span></li>`).join("");
+  const reasons = verdict.reasonsCn.length
+    ? `<div class="sv-reasons">${escapeHtml(verdict.reasonsCn.join(" · "))}</div>` : "";
+  const safetyLink = meta.safetyUrl
+    ? `<a href="${escapeAttr(safeUrl(meta.safetyUrl))}" target="_blank" rel="noopener noreferrer">岩钓安全 ↗</a>` : "";
+  return `
+    <div class="safety-verdict sv-${verdict.level}">
+      <div class="sv-head">
+        <span class="sv-label">${escapeHtml(verdict.labelCn)}</span>
+        <span class="sv-label-en">${escapeHtml(verdict.labelEn)}</span>
+      </div>
+      ${reasons}
+      <ul class="sv-reminders">${reminders}</ul>
+      <div class="sv-foot">
+        <button type="button" class="sv-tutorial-btn" id="safetyTutorialBtn">📖 ${escapeHtml(sc.tutorialTitleCn || "新手安全教程")}</button>
+        ${safetyLink}
+      </div>
+    </div>`;
+}
+
+// (Re)bind the "新手安全教程" button inside the verdict banner — called after each render.
+function bindSafetyVerdict() {
+  const btn = document.getElementById("safetyTutorialBtn");
+  if (btn) btn.addEventListener("click", openSafetyTutorial);
+}
+
+// Fill + open the beginner rock-safety tutorial modal (reuses the modal-overlay pattern).
+function openSafetyTutorial() {
+  const modal = document.getElementById("safetyModal");
+  const content = document.getElementById("safetyModalContent");
+  const sc = window.SAFETY_CONTENT || {};
+  if (!modal || !content) return;
+  const steps = (sc.tutorial || []).map(s =>
+    `<li>${escapeHtml(s.cn)}<br><span class="en">${escapeHtml(s.en)}</span></li>`).join("");
+  content.innerHTML = `
+    <div class="detail-hero">
+      <button class="close" id="closeSafety">×</button>
+      <h2>${escapeHtml(sc.tutorialTitleCn || "新手岩钓安全")}</h2>
+      <div class="sub">${escapeHtml(sc.tutorialTitleEn || "")}</div>
+    </div>
+    <div class="detail-body">
+      <ul class="safety-steps">${steps}</ul>
+      <div class="reg-disclaimer">⚠️ ${escapeHtml(sc.disclaimerCn || "")} · <span class="en">${escapeHtml(sc.disclaimerEn || "")}</span></div>
+    </div>`;
+  modal.classList.remove("hidden");
+  const close = document.getElementById("closeSafety");
+  if (close) close.onclick = () => modal.classList.add("hidden");
+  modal.onclick = (e) => { if (e.target === modal) modal.classList.add("hidden"); };
+}
+
 function renderRigsSection(spot) {
   const availableSpecies = spot.species.filter(sp => window.RIGS_BY_SPECIES && window.RIGS_BY_SPECIES[sp]);
   if (!availableSpecies.length) {
@@ -860,15 +1003,15 @@ function renderAccessSection(spotId) {
           <div class="access-label">${a.score}/5 · ${terrainLabel(a.terrain)}</div>
         </div>
         <div class="access-row">
-          <span class="access-icon">🚗</span>
+          <span class="access-icon">${svgIcon('car')}</span>
           <div><b>自驾</b>${escapeHtml(a.drive)}</div>
         </div>
         <div class="access-row">
-          <span class="access-icon">🚌</span>
+          <span class="access-icon">${svgIcon('bus')}</span>
           <div><b>公共交通</b>${escapeHtml(a.pt)}</div>
         </div>
         ${a.tips && a.tips.length ? `
-        <div class="access-tips-header">💬 钓友社区整理 · Community Tips</div>
+        <div class="access-tips-header">${svgIcon('chat')} 钓友社区整理 · Community Tips</div>
         <ul class="access-tips">
           ${a.tips.map(t => `<li>${escapeHtml(t)}</li>`).join("")}
         </ul>
@@ -918,12 +1061,12 @@ function render() {
 
   listEl.innerHTML = "";
   if (!toShow.length) {
-    listEl.innerHTML = `<div class="empty-state"><span class="emoji">🎣</span>该条件下暂无匹配的钓点<br><small>试试放大半径或更换鱼种</small></div>`;
+    listEl.innerHTML = `<div class="empty-state"><svg class="empty-fish" aria-hidden="true"><use href="#ic-fish"></use></svg>该条件下暂无匹配的钓点<br><small>试试放大半径或更换鱼种</small></div>`;
     return;
   }
   // Distance label semantics: "离我" only when the reference point IS the user.
   const refIsUser = userLatLng && mapCenterLatLng && haversineKm(mapCenterLatLng, userLatLng) < 3;
-  const distLabel = refIsUser ? "📍" : "🎯";
+  const distLabel = `<svg class="ic" aria-hidden="true"><use href="#ic-${refIsUser ? "target" : "near"}"></use></svg>`;
   const distTitle = refIsUser ? "离我" : "距搜索中心";
 
   toShow.slice(0, 20).forEach((entry, i) => {
@@ -940,10 +1083,10 @@ function render() {
         <div class="spot-meta">
           <span title="${distTitle}">${distLabel} ${entry.dist.toFixed(1)} km</span>
           <span class="type-badge type-${s.type}">${typeIcon(s.type)} ${typeLabel(s.type)}</span>
-          ${a ? `<span class="access-badge" title="交通便利 ${a.score}/5">🚗 ${"★".repeat(a.score)}${"☆".repeat(5-a.score)}</span>` : ""}
+          ${a ? `<span class="access-badge" title="交通便利 ${a.score}/5">${"★".repeat(a.score)}<span class="acc-empty">${"☆".repeat(5-a.score)}</span></span>` : ""}
         </div>
         <div class="spot-species">${s.species.slice(0, 4).map(sp =>
-          `<span class="sp-chip${inSeason.includes(sp) ? " in-season" : ""}"${inSeason.includes(sp) ? ' title="当季鱼种"' : ""}>${inSeason.includes(sp) ? "🔥 " : ""}${sp}</span>`).join("")}</div>
+          `<span class="sp-chip${inSeason.includes(sp) ? " in-season" : ""}"${inSeason.includes(sp) ? ' title="当季鱼种 · 正在咬钩"' : ""}>${sp}</span>`).join("")}</div>
       </div>
       <div class="score-box">
         <b>${toDisplayScore(entry.displayScore)}</b>
@@ -968,7 +1111,18 @@ function typeLabel(t) {
   return ({ rock: "岩钓", harbour: "港内", estuary: "河口", beach: "沙滩" })[t] || t;
 }
 function typeIcon(t) {
-  return ({ rock: "🪨", harbour: "⚓", estuary: "🏞️", beach: "🏖️" })[t] || "🌊";
+  const name = ({ rock: "rock", harbour: "anchor", estuary: "estuary", beach: "beach" })[t] || "wave";
+  return svgIcon(name);
+}
+// Inline SVG icon helper — references the sprite in index.html. `name` is always a fixed
+// literal here (never user input), so the markup is static and safe under the strict CSP.
+function svgIcon(name, cls) {
+  return `<svg class="ic${cls ? " " + cls : ""}" aria-hidden="true"><use href="#ic-${name}"></use></svg>`;
+}
+// Update only the locate button's label span, preserving its SVG icon (textContent would wipe it).
+function setLocateLabel(text) {
+  const l = document.getElementById("locateLabel");
+  if (l) l.textContent = text;
 }
 
 // Tracks the currently-open detail sheet so we can (a) hand the live scoring snapshot to the
@@ -986,11 +1140,16 @@ function showDetail(id) {
       <button class="close" id="closeDetail">×</button>
       <h2>${s.nameCn}</h2>
       <div class="sub">${s.name} · ${typeIcon(s.type)} ${typeLabel(s.type)} · 距搜索中心 ${entry.dist.toFixed(1)} km</div>
-      <div class="detail-chips">${s.species.map(sp => `<span class="chip${inSeason.includes(sp) ? " in-season" : ""}">${inSeason.includes(sp) ? "🔥 " : ""}${sp}</span>`).join("")}</div>
+      <div class="detail-chips">${s.species.map(sp => {
+        const cls = "chip" + (inSeason.includes(sp) ? " in-season" : "");
+        return (window.RIGS_BY_SPECIES && window.RIGS_BY_SPECIES[sp])
+          ? `<button type="button" class="${cls} chip-btn" data-scene-species="${escapeAttr(sp)}" title="查看 ${escapeAttr(sp)} 场景页 · Scene page">${sp}</button>`
+          : `<span class="${cls}">${sp}</span>`;
+      }).join("")}</div>
       <div class="detail-score">
         <div class="detail-score-number" id="detailScoreNum">${toDisplayScore(entry.displayScore)}</div>
         <div style="flex:1">
-          <div style="font-size:10px;opacity:.75;letter-spacing:.4px;margin-bottom:4px">钓况分 · 满分 100 · 距离不计入 · <a href="#" id="algoLink" style="color:#ffd166;text-decoration:underline">算法 ℹ️</a></div>
+          <div style="font-size:10px;opacity:.75;letter-spacing:.4px;margin-bottom:4px">钓况分 · 满分 100 · 距离不计入 · <a href="#" id="algoLink" style="color:#ffd166;text-decoration:underline">算法 ${svgIcon('info')}</a></div>
           <div class="score-bar"><div id="detailScoreBar" style="width:${toDisplayScore(entry.displayScore)}%"></div></div>
         </div>
       </div>
@@ -998,6 +1157,8 @@ function showDetail(id) {
     </div>
 
     <div class="detail-body">
+      <div id="safetyVerdict">${renderSafetyVerdict(s, safetyVerdict(s, entry.snapshot || null))}</div>
+
       <section>
         <h4>当前海况 · Live Conditions</h4>
         <div class="spot-conditions" id="spotConditions">
@@ -1017,6 +1178,8 @@ function showDetail(id) {
       </section>
 
       ${renderRigsSection(s)}
+
+      ${renderRegulationsSection(s)}
 
       <section>
         <h4>现场提示 · Local Tips</h4>
@@ -1066,6 +1229,14 @@ function showDetail(id) {
   loadSpotCatches(s.id);
   // bind rig tabs
   bindRigTabs(s);
+  // bind rock-fishing safety tutorial button (verdict banner)
+  bindSafetyVerdict();
+  // species chips → spot×species scene page (#/scene/:spotId/:species)
+  const chipsEl = el.querySelector(".detail-chips");
+  if (chipsEl) chipsEl.addEventListener("click", (e) => {
+    const b = e.target.closest("[data-scene-species]");
+    if (b) location.hash = `#/scene/${encodeURIComponent(s.id)}/${encodeURIComponent(b.dataset.sceneSpecies)}`;
+  });
   document.getElementById("detail").classList.remove("hidden");
 
   // Load per-spot live conditions (cached 10 min). Async — updates the section when done,
@@ -1084,6 +1255,9 @@ function showDetail(id) {
     if (bar) bar.style.width = toDisplayScore(refined.displayScore) + "%";
     if (why) why.innerHTML = refined.reasons.map(r => `<li>${r}</li>`).join("") || "<li>当前无特别加减分因素</li>";
     if (note) note.textContent = `✓ 已按本点实时海况精算 · ${formatTime(new Date(data.fetchedAt))}`;
+    // Refresh the rock-fishing go/no-go banner to match the refined per-spot snapshot.
+    const sv = document.getElementById("safetyVerdict");
+    if (sv) { sv.innerHTML = renderSafetyVerdict(s, safetyVerdict(s, refined.snapshot)); bindSafetyVerdict(); }
     // Catch reports logged from now on freeze THIS refined (per-spot) snapshot.
     if (currentDetail.spotId === s.id) currentDetail.snapshot = refined.snapshot;
   }).catch(err => {
@@ -1166,18 +1340,18 @@ function showWeather() {
 
   const primeTimeBlock = windows ? `
     <div class="prime-windows">
-      <div class="prime-header">🎣 今日最佳时段 · Prime Time</div>
+      <div class="prime-header">${svgIcon('clock')} 今日最佳时段 · Prime Time</div>
       <div class="prime-row ${winStatus === 'dawn' ? 'active' : ''}">
-        <span class="prime-icon">🌅</span>
+        <span class="prime-icon">${svgIcon('sunrise')}</span>
         <span class="prime-label">晨 Dawn</span>
         <span class="prime-range">${formatTime(windows.dawn.start)} – ${formatTime(windows.dawn.end)}</span>
       </div>
       <div class="prime-row ${winStatus === 'dusk' ? 'active' : ''}">
-        <span class="prime-icon">🌇</span>
+        <span class="prime-icon">${svgIcon('sunset')}</span>
         <span class="prime-label">昏 Dusk</span>
         <span class="prime-range">${formatTime(windows.dusk.start)} – ${formatTime(windows.dusk.end)}</span>
       </div>
-      ${winStatus ? `<div class="prime-now">✨ 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
+      ${winStatus ? `<div class="prime-now">${svgIcon('spark')} 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
     </div>
   ` : "";
 
@@ -1208,13 +1382,13 @@ function renderPrimeWindowBadge() {
   const windows = computePrimeWindows(currentWeather.weather._daily);
   if (!windows) return "";
   const winStatus = currentWindowStatus(windows);
-  const nowActive = winStatus ? `<span class="prime-badge-now">✨ 正值黄金时段</span>` : "";
+  const nowActive = winStatus ? `<span class="prime-badge-now">${svgIcon('spark')} 正值黄金时段</span>` : "";
   return `
     <div class="prime-badge">
       ${nowActive}
       <div class="prime-badge-row">
-        <span>🌅 晨钓 ${formatTime(windows.dawn.start)}-${formatTime(windows.dawn.end)}</span>
-        <span>🌇 昏钓 ${formatTime(windows.dusk.start)}-${formatTime(windows.dusk.end)}</span>
+        <span>${svgIcon('sunrise')} 晨钓 ${formatTime(windows.dawn.start)}-${formatTime(windows.dawn.end)}</span>
+        <span>${svgIcon('sunset')} 昏钓 ${formatTime(windows.dusk.start)}-${formatTime(windows.dusk.end)}</span>
       </div>
     </div>
   `;
@@ -1232,7 +1406,7 @@ async function locateUser() {
     return;
   }
   btn.disabled = true;
-  btn.textContent = "定位中…";
+  setLocateLabel("定位中…");
   status.classList.remove("error");
   status.textContent = "获取您的位置…";
 
@@ -1241,7 +1415,7 @@ async function locateUser() {
     if (userMarker) map.removeLayer(userMarker);
     userMarker = L.marker(userLatLng, {
       icon: L.divIcon({
-        html: '<div style="background:#ffb703;border:3px solid #fff;width:20px;height:20px;border-radius:50%;box-shadow:0 0 0 6px rgba(255,183,3,.25)"></div>',
+        html: '<div style="background:#11b9c6;border:3px solid #fff;width:20px;height:20px;border-radius:50%;box-shadow:0 0 0 6px rgba(17,185,198,.28)"></div>',
         iconSize: [20,20], iconAnchor: [10,10], className: ""
       })
     }).addTo(map).bindPopup("您的位置 · You are here");
@@ -1254,14 +1428,14 @@ async function locateUser() {
       status.textContent = `✅ 推荐：${best.spot.nameCn}（${best.dist.toFixed(1)} km）· 钓况 ${toDisplayScore(best.displayScore)}/100`;
     }
     btn.disabled = false;
-    btn.textContent = "📍 刷新";
+    setLocateLabel("刷新");
   }, err => {
     status.textContent = "无法获取定位（" + err.message + "），使用悉尼市中心。";
     status.classList.add("error");
     userLatLng = SYDNEY_CENTER;
     loadConditions().then(render);
     btn.disabled = false;
-    btn.textContent = "📍 定位我";
+    setLocateLabel("定位我");
   }, { enableHighAccuracy: true, timeout: 10000 });
 }
 
@@ -1316,27 +1490,27 @@ function renderSpotConditionsHTML(data) {
 
   const primeBlock = windows ? `
     <div class="spot-cond-prime">
-      <div class="spot-cond-prime-header">🎣 今日最佳时段 · Prime Time</div>
+      <div class="spot-cond-prime-header">${svgIcon('clock')} 今日最佳时段 · Prime Time</div>
       <div class="spot-cond-prime-rows">
-        <div class="${winStatus === 'dawn' ? 'active' : ''}">🌅 晨 ${formatTime(windows.dawn.start)}–${formatTime(windows.dawn.end)}</div>
-        <div class="${winStatus === 'dusk' ? 'active' : ''}">🌇 昏 ${formatTime(windows.dusk.start)}–${formatTime(windows.dusk.end)}</div>
+        <div class="${winStatus === 'dawn' ? 'active' : ''}">${svgIcon('sunrise')} 晨 ${formatTime(windows.dawn.start)}–${formatTime(windows.dawn.end)}</div>
+        <div class="${winStatus === 'dusk' ? 'active' : ''}">${svgIcon('sunset')} 昏 ${formatTime(windows.dusk.start)}–${formatTime(windows.dusk.end)}</div>
       </div>
-      ${winStatus ? `<div class="spot-cond-now">✨ 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
+      ${winStatus ? `<div class="spot-cond-now">${svgIcon('spark')} 当前正值${winStatus === 'dawn' ? '晨钓' : '昏钓'}黄金窗口</div>` : ""}
     </div>
   ` : "";
 
   const moon = moonInfo();
   return `
     <div class="spot-cond-grid">
-      <div><span>🌡 气温</span><b>${w.temperature_2m?.toFixed(1) ?? "-"} °C</b></div>
-      <div><span>💨 风</span><b>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</b></div>
-      <div><span>🌧 降雨</span><b>${w.precipitation?.toFixed(1) ?? 0} mm</b></div>
-      ${m ? `<div><span>🌊 浪高</span><b>${m.wave_height?.toFixed(1) ?? "-"} m</b></div>` : ""}
-      ${m ? `<div><span>⏱ 周期</span><b>${m.wave_period?.toFixed(0) ?? "-"} s</b></div>` : ""}
-      <div><span>🌙 月相</span><b>${moon.label.replace(/^\S+ /, "")}</b></div>
-      ${t && t.nextHigh ? `<div><span>⬆ 下个高潮</span><b>${formatTime(t.nextHigh.time)}</b></div>` : ""}
-      ${t && t.nextLow ? `<div><span>⬇ 下个低潮</span><b>${formatTime(t.nextLow.time)}</b></div>` : ""}
-      ${tideText ? `<div class="wide"><span>🌀 潮汐</span><b>${tideText}</b></div>` : ""}
+      <div><span>${svgIcon('temp')} 气温</span><b>${w.temperature_2m?.toFixed(1) ?? "-"} °C</b></div>
+      <div><span>${svgIcon('wind')} 风</span><b>${degToCompass(w.wind_direction_10m)} ${w.wind_speed_10m?.toFixed(0) ?? "-"} km/h</b></div>
+      <div><span>${svgIcon('rain')} 降雨</span><b>${w.precipitation?.toFixed(1) ?? 0} mm</b></div>
+      ${m ? `<div><span>${svgIcon('wave')} 浪高</span><b>${m.wave_height?.toFixed(1) ?? "-"} m</b></div>` : ""}
+      ${m ? `<div><span>${svgIcon('clock')} 周期</span><b>${m.wave_period?.toFixed(0) ?? "-"} s</b></div>` : ""}
+      <div><span>${svgIcon('moon')} 月相</span><b>${moon.label.replace(/^\S+ /, "")}</b></div>
+      ${t && t.nextHigh ? `<div><span>${svgIcon('arrow-up')} 下个高潮</span><b>${formatTime(t.nextHigh.time)}</b></div>` : ""}
+      ${t && t.nextLow ? `<div><span>${svgIcon('arrow-down')} 下个低潮</span><b>${formatTime(t.nextLow.time)}</b></div>` : ""}
+      ${tideText ? `<div class="wide"><span>${svgIcon('tide')} 潮汐</span><b>${tideText}</b></div>` : ""}
     </div>
     ${primeBlock}
     <div class="spot-cond-footnote">数据时间 ${formatTime(new Date(data.fetchedAt))} · 基于钓点坐标实时计算 · 潮汐时间已按悉尼官方潮表校准</div>
@@ -1353,8 +1527,8 @@ function updateReferenceIndicator() {
   if (useUser && userLatLng) {
     statusEl.classList.remove("error");
     statusEl.innerHTML = best
-      ? `📍 基于你的位置 · 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.displayScore)}/100`
-      : `📍 基于你的位置`;
+      ? `${svgIcon('pin')} 基于你的位置 · 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.displayScore)}/100`
+      : `${svgIcon('pin')} 基于你的位置`;
   } else {
     statusEl.classList.remove("error");
     const label = regionLabelForLatLng(mapCenterLatLng);
@@ -1362,8 +1536,8 @@ function updateReferenceIndicator() {
       ? ` <a href="#" id="backToMe" style="color:#0077b6;text-decoration:underline">返回我的位置</a>`
       : "";
     statusEl.innerHTML = best
-      ? `🗺️ 基于地图视野（${label}）· 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.displayScore)}/100${backBtn}`
-      : `🗺️ 基于地图视野（${label}）${backBtn}`;
+      ? `${svgIcon('map')} 基于地图视野（${label}）· 推荐：<b>${escapeHtml(best.spot.nameCn)}</b> · ${toDisplayScore(best.displayScore)}/100${backBtn}`
+      : `${svgIcon('map')} 基于地图视野（${label}）${backBtn}`;
     const back = document.getElementById("backToMe");
     if (back) back.onclick = (e) => {
       e.preventDefault();
@@ -1480,7 +1654,7 @@ function renderReviewsSection(spotId) {
 
   const globalBlock = globalRefs.length ? `
     <div class="refs-block global">
-      <div class="refs-header">⚠️ 出钓前必查 · Before You Go</div>
+      <div class="refs-header">${svgIcon('alert')} 出钓前必查 · Before You Go</div>
       <div class="refs-list">${globalRefs.map(renderRefItem).join("")}</div>
     </div>
   ` : "";
@@ -1683,13 +1857,27 @@ async function importLocalReviews(spotId) {
 }
 
 // ---------- Catch reports ----------
+// One-line NSW reminder for the catch form when a species is picked (escaped throughout).
+function catchRegReminderHTML(spot, species) {
+  const reg = regsForSpecies(species);
+  const meta = window.NSW_REGULATIONS_META || {};
+  if (!reg && !(spot.marineZone && spot.marineZone.sanctuary)) return "";
+  const bits = [];
+  if (spot.marineZone && spot.marineZone.sanctuary) bits.push(`🚫 ${escapeHtml(spot.marineZone.noteCn || "禁渔保护区")}`);
+  if (reg) {
+    if (reg.protected) bits.push(`🚫 ${escapeHtml(reg.nameCn)} 受保护，请放流 · protected, release`);
+    else bits.push(escapeHtml(regSummaryText(reg)));
+  }
+  return `${bits.join(" · ")} <span class="reg-updated">以官方为准 · ${escapeHtml(meta.lastUpdated || "")}</span>`;
+}
+
 function renderCatchFormArea(spot) {
   const api = window.SF_API;
   if (!api || !api.available) {
     return `<div class="catch-note">连接后端服务后即可记录渔获，并参与评分校准。</div>`;
   }
   if (!api.user) {
-    return `<button class="auth-cta" id="catch-login">🎣 登录后记录渔获 · Sign in to log a catch</button>`;
+    return `<button class="auth-cta" id="catch-login">${svgIcon('fish')} 登录后记录渔获 · Sign in to log a catch</button>`;
   }
   const opts = (spot.species || []).map(sp => `<option value="${escapeAttr(sp)}">${escapeHtml(sp)}</option>`).join("");
   return `
@@ -1699,6 +1887,7 @@ function renderCatchFormArea(spot) {
         <select id="ct-species"><option value="">选择鱼种…</option>${opts}<option value="__other">其他 Other</option></select>
         <input id="ct-species-other" placeholder="其他鱼种" maxlength="40" style="display:none" />
       </div>
+      <div id="ct-reg-reminder" class="catch-reg-reminder" aria-live="polite"></div>
       <div class="catch-row">
         <input id="ct-length" type="number" min="0" max="500" step="0.1" placeholder="长度 cm" />
         <input id="ct-weight" type="number" min="0" max="500" step="0.01" placeholder="重量 kg" />
@@ -1805,7 +1994,16 @@ function bindCatchForm(spot) {
   document.getElementById("catch-login")?.addEventListener("click", () => window.SF_AUTH_UI?.openModal("login"));
   const sp = document.getElementById("ct-species");
   const other = document.getElementById("ct-species-other");
-  if (sp && other) sp.addEventListener("change", () => { other.style.display = sp.value === "__other" ? "" : "none"; });
+  const regReminder = document.getElementById("ct-reg-reminder");
+  const updateRegReminder = () => {
+    if (!regReminder) return;
+    const v = sp ? sp.value : "";
+    regReminder.innerHTML = (v && v !== "__other") ? catchRegReminderHTML(spot, v) : "";
+  };
+  if (sp) sp.addEventListener("change", () => {
+    if (other) other.style.display = sp.value === "__other" ? "" : "none";
+    updateRegReminder();
+  });
 
   // Local previews for up to 4 photos (object URLs revoked on re-pick to avoid leaks).
   const photoInput = document.getElementById("ct-photo");
@@ -1833,6 +2031,16 @@ function bindCatchForm(spot) {
     const notes = document.getElementById("ct-notes")?.value.trim();
     const files = [...(photoInput?.files || [])].slice(0, 4);
     if (!species && !notes && !files.length) { alert("请至少选择鱼种、填写备注或添加照片"); return; }
+
+    // Non-blocking NSW compliance nudge — never hard-blocks (logging a release is legit).
+    const reg = regsForSpecies(species);
+    if (reg) {
+      if (reg.protected) {
+        if (!confirm(`⚠️ ${reg.nameCn} (${species}) 在 NSW 受保护/限制捕捞。\n请确认已放流 (C&R)。仍要记录吗？`)) return;
+      } else if (reg.minSizeCm != null && !isNaN(lengthCm) && lengthCm < reg.minSizeCm) {
+        if (!confirm(`⚠️ 你填写的长度 ${lengthCm}cm 小于 NSW 最小尺寸 ${reg.minSizeCm}cm。\n请确认已放流。仍要记录吗？`)) return;
+      }
+    }
 
     submit.disabled = true;
     try {

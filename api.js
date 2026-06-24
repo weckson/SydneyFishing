@@ -121,8 +121,12 @@
     getUnread() { return req("/api/notifications/unread"); },
     markNotificationsRead() { return req("/api/notifications/read", { method: "POST" }); },
 
-    // insights ("what's biting")
-    getInsights() { return req("/api/insights"); }
+    // insights ("what's biting") — windowDays ∈ 7|14|30 for the weekly report
+    getInsights(windowDays) { return req("/api/insights" + (windowDays ? `?windowDays=${encodeURIComponent(windowDays)}` : "")); },
+
+    // online competitions (read-only; leaderboard derived from public catch reports)
+    getCompetitions() { return req("/api/competitions"); },
+    getCompetitionLeaderboard(id) { return req(`/api/competitions/${encodeURIComponent(id)}/leaderboard`); }
   };
 
   window.SF_API = SF_API;

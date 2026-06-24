@@ -6,6 +6,8 @@
 // Depends on globals: SF_API, escapeHtml, safeUrl, SF_AUTH_UI (all loaded before this file).
 (function () {
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s || ""));
+  // Inline SVG icon from the sprite in index.html (name is always a fixed literal — CSP-safe).
+  const ic = (n) => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"></use></svg>`;
   const view = () => document.getElementById("forumView");
   const inner = () => document.getElementById("forumInner");
 
@@ -32,7 +34,7 @@
 
   const topBar = (title, backHash) => `
     <div class="forum-bar">
-      ${backHash != null ? `<button class="forum-back" data-back="${esc(backHash)}">←</button>` : `<span class="forum-logo">💬</span>`}
+      ${backHash != null ? `<button class="forum-back" data-back="${esc(backHash)}">←</button>` : `<span class="forum-logo">${ic("chat")}</span>`}
       <div class="forum-title">${esc(title)}</div>
       <button class="forum-close" id="forumCloseBtn">×</button>
     </div>`;
@@ -49,13 +51,18 @@
     let data;
     try { data = await window.SF_API.forumCategories(); }
     catch (e) { return errorBox(e.message); }
-    const cards = data.categories.map(c => `
+    const card = (c) => `
       <button class="board-card" data-cat="${c.id}">
         <div class="board-name">${esc(c.name_cn)} <span class="board-en">${esc(c.name)}</span></div>
         <div class="board-desc">${esc(c.descr_cn || "")}</div>
         <div class="board-count">${c.threadCount} 帖</div>
-      </button>`).join("");
-    inner().innerHTML = topBar("社区 · Community", null) + `<div class="board-list">${cards}</div>`;
+      </button>`;
+    // Split topic boards from regional boards (r- slug prefix) for a clearer two-group layout.
+    const topics = data.categories.filter(c => !(c.slug || "").startsWith("r-"));
+    const regions = data.categories.filter(c => (c.slug || "").startsWith("r-"));
+    let body = `<div class="board-list">${topics.map(card).join("")}</div>`;
+    if (regions.length) body += `<div class="board-group-title">区域版块 · Regions</div><div class="board-list">${regions.map(card).join("")}</div>`;
+    inner().innerHTML = topBar("社区 · Community", null) + body;
     wireBar();
     inner().querySelectorAll(".board-card").forEach(b => b.onclick = () => go("#/forum/c/" + b.dataset.cat));
   }
@@ -69,10 +76,10 @@
     const rows = data.threads.map(t => `
       <button class="thread-row" data-tid="${t.id}">
         <div class="thread-row-main">
-          <div class="thread-row-title">${t.is_pinned ? "📌 " : ""}${esc(t.title)}</div>
+          <div class="thread-row-title">${t.is_pinned ? `<span class="thread-pin">${ic("pinned")}</span>` : ""}${esc(t.title)}</div>
           <div class="thread-row-meta">${esc(t.author_name || "钓友")} · ${fmtDate(t.last_post_at)}</div>
         </div>
-        <div class="thread-row-stats"><span>💬 ${t.reply_count}</span><span>👍 ${t.like_count}</span></div>
+        <div class="thread-row-stats"><span>${ic("chat")} ${t.reply_count}</span><span>${ic("thumb")} ${t.like_count}</span></div>
       </button>`).join("") || `<div class="forum-empty">还没有帖子，来发第一帖</div>`;
     inner().innerHTML = topBar("板块 · Board", "#/forum") +
       `<div class="thread-list">${rows}</div>
@@ -131,15 +138,15 @@
       <div class="thread-detail">
         <div class="thread-head">
           <h2>${esc(t.title)}</h2>
-          <div class="thread-head-meta">${esc(t.author_name)} · ${fmtDate(t.created_at)} · 💬 ${t.reply_count}</div>
+          <div class="thread-head-meta">${esc(t.author_name)} · ${fmtDate(t.created_at)} · ${ic("chat")} ${t.reply_count}</div>
           <div class="thread-actions">
             ${likeBtn("thread", t.id, t.liked, t.like_count)}
-            <button class="act-share" data-share="${esc("#/forum/t/" + t.id)}">🔗 分享</button>
-            ${t.canDelete ? `<button class="act-del" data-del-thread="${t.id}">删除</button>` : `<button class="act-report" data-report-type="thread" data-report-id="${t.id}">举报</button>`}
+            <button class="act-share" data-share="${esc("#/forum/t/" + t.id)}">${ic("share")} 分享</button>
+            ${t.canDelete ? `<button class="act-del" data-del-thread="${t.id}">删除</button>` : `<button class="act-report" data-report-type="thread" data-report-id="${t.id}">${ic("flag")} 举报</button>`}
           </div>
         </div>
         <div class="post-list">${posts}</div>
-        ${t.is_locked ? `<div class="thread-locked">🔒 该主题已锁定</div>` : replyArea}
+        ${t.is_locked ? `<div class="thread-locked">${ic("lock")} 该主题已锁定</div>` : replyArea}
       </div>`;
     wireBar();
     wireThread(threadId);
@@ -152,13 +159,13 @@
         <div class="post-body">${bodyHtml(p.body)}</div>
         <div class="post-actions">
           ${likeBtn("post", p.id, p.liked, p.like_count)}
-          ${p.canDelete && !p.is_op ? `<button class="act-del" data-del-post="${p.id}">删除</button>` : (!p.is_op ? `<button class="act-report" data-report-type="post" data-report-id="${p.id}">举报</button>` : "")}
+          ${p.canDelete && !p.is_op ? `<button class="act-del" data-del-post="${p.id}">删除</button>` : (!p.is_op ? `<button class="act-report" data-report-type="post" data-report-id="${p.id}">${ic("flag")} 举报</button>` : "")}
         </div>
       </div>`;
   }
 
   function likeBtn(type, id, liked, count) {
-    return `<button class="act-like${liked ? " liked" : ""}" data-like-type="${type}" data-like-id="${id}">👍 <span class="like-n">${count}</span></button>`;
+    return `<button class="act-like${liked ? " liked" : ""}" data-like-type="${type}" data-like-id="${id}">${ic("thumb")} <span class="like-n">${count}</span></button>`;
   }
 
   function wireThread(threadId) {
@@ -174,7 +181,7 @@
     // share
     inner().querySelectorAll(".act-share").forEach(b => b.onclick = async () => {
       const url = location.origin + location.pathname + b.dataset.share;
-      try { await navigator.clipboard.writeText(url); b.textContent = "✓ 链接已复制"; setTimeout(() => b.textContent = "🔗 分享", 1500); }
+      try { await navigator.clipboard.writeText(url); b.innerHTML = `${ic("check")} 链接已复制`; setTimeout(() => b.innerHTML = `${ic("share")} 分享`, 1500); }
       catch (e) { prompt("复制此链接分享：", url); }
     });
     // report

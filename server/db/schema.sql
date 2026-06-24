@@ -183,7 +183,14 @@ INSERT INTO forum_categories (slug, name, name_cn, descr_cn, sort) VALUES
   ('gear',          'Gear & Rigs', '装备与钓组', '竿轮线钩、DIY 钓组交流', 40),
   ('beginners',     'Beginners', '新手入门', '新手提问、答疑、避坑', 50),
   ('safety',        'Safety & Notices', '安全与公告', '岩钓/天气安全提醒、规则公告', 60),
-  ('off-topic',     'Off-topic', '灌水闲聊', '轻松话题，钓鱼之外的一切', 90)
+  ('off-topic',     'Off-topic', '灌水闲聊', '轻松话题，钓鱼之外的一切', 90),
+  -- Regional boards (r- prefix lets the client group "区域 Regions" separately from topics).
+  ('r-harbour',          'Sydney Harbour',          '悉尼港',     '悉尼港及周边钓点交流', 110),
+  ('r-northern-beaches', 'Northern Beaches',        '北部海滩',   '北部海滩区域钓点交流', 120),
+  ('r-south',            'South (Botany–Cronulla)', '南区',       '南区/植物学湾钓点交流', 130),
+  ('r-central-coast',    'Central Coast',           '中央海岸',   '中央海岸区域钓点交流', 140),
+  ('r-wollongong',       'Wollongong / Illawarra',  '卧龙岗',     '卧龙岗/伊拉瓦拉钓点交流', 150),
+  ('r-hawkesbury',       'Hawkesbury / West',       '霍克斯伯里', '霍克斯伯里水系钓点交流', 160)
 ON CONFLICT (slug) DO NOTHING;
 
 -- ---------- notifications ----------
@@ -207,3 +214,27 @@ CREATE TABLE IF NOT EXISTS email_verifications (
   expires_at  timestamptz NOT NULL,
   created_at  timestamptz NOT NULL DEFAULT now()
 );
+
+-- ---------- online competitions (SCOPE.md: ONLINE ONLY — photo + measurement, never in-person) ----------
+-- A competition is just a time window + species filter over PUBLIC catch_reports. The leaderboard is
+-- a query; there is NO separate entry flow — logging a public catch in-window IS entering. No events,
+-- no RSVPs, no location gathering, no buddy/boat tables.
+CREATE TABLE IF NOT EXISTS competitions (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  slug        text UNIQUE NOT NULL,
+  title       text NOT NULL,
+  name_cn     text NOT NULL,
+  descr_cn    text,
+  species     text,                              -- English species (e.g. 'Bream'); NULL = any
+  metric      text NOT NULL DEFAULT 'length',    -- 'length' | 'weight'
+  region_id   text,                              -- optional client region id; NULL = all Sydney
+  starts_at   timestamptz NOT NULL,
+  ends_at     timestamptz NOT NULL,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_comp_active ON competitions(ends_at DESC);
+
+-- Seed one example monthly competition (idempotent). Which competition runs is a content decision.
+INSERT INTO competitions (slug, title, name_cn, descr_cn, species, metric, starts_at, ends_at) VALUES
+  ('biggest-bream-2026-06', 'Biggest Bream — June 2026', '六月最大黑鲷', '本月最大黑鲷（按长度）· 记录一条公开渔获即参赛', 'Bream', 'length', '2026-06-01T00:00:00+10:00', '2026-07-01T00:00:00+10:00')
+ON CONFLICT (slug) DO NOTHING;
