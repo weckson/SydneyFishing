@@ -1,0 +1,12 @@
+# Normalize line endings so the two dev machines (incl. Windows) never produce
+# phantom whole-file diffs from CRLF/LF flips. Repo is stored as LF.
+* text=auto eol=lf
+
+# Binary assets — never touch / diff as text.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.webp  binary
+*.ico   binary
+*.woff  binary
+*.woff2 binary
