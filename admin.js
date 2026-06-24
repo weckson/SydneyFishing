@@ -4,6 +4,7 @@
 // Depends on globals: SF_API, escapeHtml.
 (function () {
   const esc = (s) => (window.escapeHtml ? window.escapeHtml(s) : String(s || ""));
+  const ic = (n) => `<svg class="ic" aria-hidden="true"><use href="#ic-${n}"></use></svg>`;
   const view = () => document.getElementById("adminView");
   const inner = () => document.getElementById("adminInner");
   const isAdmin = () => !!(window.SF_API && window.SF_API.isAdmin && window.SF_API.isAdmin());
@@ -25,7 +26,7 @@
       <div class="adm-report" data-id="${esc(String(r.id))}" data-tt="${esc(r.target_type)}" data-ti="${esc(String(r.target_id))}">
         <div class="adm-top">
           <span class="adm-type">${esc(TYPE_LABEL[r.target_type] || r.target_type)}</span>
-          <span class="adm-reason">🚩 ${esc(r.reason || "")}</span>
+          <span class="adm-reason">${ic("flag")} ${esc(r.reason || "")}</span>
           ${flags}
         </div>
         <div class="adm-preview">${esc(p.text || "（无预览 No preview）")}</div>
@@ -41,7 +42,7 @@
   }
 
   function header() {
-    return `<div class="forum-bar"><span class="forum-logo">🛡️</span><div class="forum-title">审核后台 · Moderation</div><button class="forum-close" id="admClose">×</button></div>`;
+    return `<div class="forum-bar"><span class="forum-logo">${ic("shield")}</span><div class="forum-title">审核后台 · Moderation</div><button class="forum-close" id="admClose">×</button></div>`;
   }
 
   async function render() {
