@@ -102,6 +102,35 @@ export default async function catchRoutes(app) {
     return reply.code(201).send({ catch: out });
   });
 
+  // ---- report a catch report for moderation (auth) ----
+  // Reuses the generic forum_reports table (target_type='catch_report'). One open report per
+  // user per catch (idempotent). Admins triage these via /api/admin/reports. See DEPLOY.md §12.
+  app.post("/:id/report", {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: "10 minutes" } },
+    schema: {
+      params: { type: "object", required: ["id"], properties: { id: { type: "integer" } } },
+      body: {
+        type: "object", required: ["reason"], additionalProperties: false,
+        properties: { reason: { type: "string", minLength: 1, maxLength: 40 }, detail: { type: "string", maxLength: 500 } }
+      }
+    }
+  }, async (req, reply) => {
+    const c = await query(`SELECT id FROM catch_reports WHERE id = $1 AND deleted_at IS NULL`, [req.params.id]);
+    if (!c.rowCount) return reply.code(404).send({ error: "not_found" });
+    const dup = await query(
+      `SELECT 1 FROM forum_reports WHERE reporter_id=$1 AND target_type='catch_report' AND target_id=$2 AND status='open' LIMIT 1`,
+      [req.user.id, req.params.id]
+    );
+    if (dup.rowCount) return { ok: true, already: true };
+    await query(
+      `INSERT INTO forum_reports (reporter_id, target_type, target_id, reason, detail)
+       VALUES ($1,'catch_report',$2,$3,$4)`,
+      [req.user.id, req.params.id, req.body.reason, req.body.detail || null]
+    );
+    return { ok: true };
+  });
+
   // ---- soft-delete own catch report (auth + ownership) ----
   app.delete("/:id", {
     preHandler: requireAuth,

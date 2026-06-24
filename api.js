@@ -38,6 +38,7 @@
     get user() { return state.user; },
     get available() { return state.available; },
     get ready() { return state.ready; },
+    isAdmin() { return !!state.user && (state.user.role === "admin" || state.user.role === "moderator"); },
     onAuthChange(cb) { listeners.add(cb); return () => listeners.delete(cb); },
 
     // Probe session + backend availability. 401 = backend up, just logged out.
@@ -106,6 +107,14 @@
     forumReport(targetType, targetId, reason, detail) { return req("/api/forum/report", { method: "POST", body: { targetType, targetId, reason, detail } }); },
     forumDeleteThread(id) { return req(`/api/forum/threads/${encodeURIComponent(id)}`, { method: "DELETE" }); },
     forumDeletePost(id) { return req(`/api/forum/posts/${encodeURIComponent(id)}`, { method: "DELETE" }); },
+
+    // moderation: report content (any signed-in user) + admin takedown/triage
+    reportCatch(id, reason, detail) { return req(`/api/catches/${encodeURIComponent(id)}/report`, { method: "POST", body: { reason, detail } }); },
+    adminReports() { return req("/api/admin/reports"); },
+    adminResolveReport(id) { return req(`/api/admin/reports/${encodeURIComponent(id)}/resolve`, { method: "POST" }); },
+    adminTakedownCatch(id) { return req(`/api/admin/catches/${encodeURIComponent(id)}`, { method: "DELETE" }); },
+    adminTakedownThread(id) { return req(`/api/admin/threads/${encodeURIComponent(id)}`, { method: "DELETE" }); },
+    adminTakedownPost(id) { return req(`/api/admin/posts/${encodeURIComponent(id)}`, { method: "DELETE" }); },
 
     // notifications
     getNotifications() { return req("/api/notifications"); },

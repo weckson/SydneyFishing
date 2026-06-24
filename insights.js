@@ -31,11 +31,13 @@
     if (c.weight_kg) size.push(`${c.weight_kg}kg`);
     if (c.released) size.push("放流");
     const photo = (c.photos && c.photos[0]) ? `<img class="ins-catch-img" loading="lazy" src="${esc(mediaUrl(c.photos[0].thumb))}" alt="渔获" />` : "";
+    const report = (window.SF_API && window.SF_API.user && c.id)
+      ? `<button type="button" class="link-report" data-report-catch="${esc(String(c.id))}" title="举报 Report">🚩</button>` : "";
     return `
       <div class="ins-catch">
         ${photo}
         <div class="ins-catch-body">
-          <div class="ins-catch-top"><b>🐟 ${esc(c.species || "未填鱼种")}</b>${size.length ? ` <span class="ins-catch-size">${esc(size.join(" · "))}</span>` : ""}</div>
+          <div class="ins-catch-top"><b>🐟 ${esc(c.species || "未填鱼种")}</b>${size.length ? ` <span class="ins-catch-size">${esc(size.join(" · "))}</span>` : ""}${report}</div>
           <div class="ins-catch-sub">${esc(spotName(c.spot_id))} · ${esc(c.user_name || "钓友")} · ${fmt(c.created_at)}</div>
         </div>
       </div>`;
@@ -64,6 +66,12 @@
         <section class="ins-section"><h3>🎣 最新钓获 · Recent Catches</h3><div class="ins-catch-list">${recentHtml}</div></section>
       </div>`;
     inner().querySelector("#insClose").onclick = close;
+    // Delegated 🚩 report buttons in the recent-catch feed (reuses app.js reportCatchFlow).
+    const cl = inner().querySelector(".ins-catch-list");
+    if (cl) cl.onclick = (e) => {
+      const b = e.target.closest("[data-report-catch]");
+      if (b && window.reportCatchFlow) { e.preventDefault(); window.reportCatchFlow(b.getAttribute("data-report-catch")); }
+    };
   }
 
   function close() { if (location.hash.startsWith("#/insights")) location.hash = ""; view().classList.add("hidden"); }

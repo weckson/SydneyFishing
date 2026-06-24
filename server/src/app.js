@@ -15,6 +15,7 @@ import mediaRoutes from "./routes/media.routes.js";
 import forumRoutes from "./routes/forum.routes.js";
 import notificationRoutes from "./routes/notifications.routes.js";
 import insightsRoutes from "./routes/insights.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -70,6 +71,7 @@ export async function buildApp() {
   await app.register(forumRoutes, { prefix: "/api/forum" });
   await app.register(notificationRoutes, { prefix: "/api/notifications" });
   await app.register(insightsRoutes, { prefix: "/api/insights" });
+  await app.register(adminRoutes, { prefix: "/api/admin" });
 
   return app;
 }

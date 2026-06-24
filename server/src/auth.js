@@ -78,3 +78,18 @@ export async function requireAuth(req, reply) {
 export async function optionalAuth(req) {
   req.user = await userForToken(req.cookies?.[SESSION_COOKIE]);
 }
+
+// Admin/moderator-only gate (moderation + takedown routes). Reuses users.role.
+export async function requireAdmin(req, reply) {
+  const token = req.cookies?.[SESSION_COOKIE];
+  const user = await userForToken(token);
+  if (!user) {
+    reply.code(401).send({ error: "unauthorized", message: "请先登录 · Sign in required" });
+    return reply;
+  }
+  if (user.role !== "admin" && user.role !== "moderator") {
+    reply.code(403).send({ error: "forbidden", message: "需要管理员权限 · Admins only" });
+    return reply;
+  }
+  req.user = user;
+}

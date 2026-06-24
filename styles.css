@@ -1622,3 +1622,42 @@ main {
 .catch-photos .catch-photo { margin-top: 0; }
 .catch-photos .catch-photo img { max-height: 120px; max-width: 140px; object-fit: cover; }
 .ct-photo-preview { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ---------- moderation: report button + modal ---------- */
+.catch-foot-meta { display: inline-flex; align-items: center; gap: 6px; }
+.link-report {
+  background: none; border: none; cursor: pointer; padding: 0 2px; font-size: 12px;
+  opacity: .5; line-height: 1; transition: opacity .15s;
+}
+.link-report:hover { opacity: 1; }
+
+.report-reasons { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 12px; }
+.report-reason {
+  border: 1px solid var(--line); background: var(--bg); color: var(--ink-2);
+  border-radius: 999px; padding: 6px 12px; font-size: 13px; cursor: pointer; transition: all .15s;
+}
+.report-reason:hover { border-color: var(--ocean-3); }
+.report-reason.active { background: var(--coral); border-color: var(--coral); color: #fff; }
+
+/* ---------- moderation: admin panel (#/admin) ---------- */
+.adm-body { padding: 12px 14px 28px; }
+.adm-stat { color: var(--muted); font-size: 13px; margin-bottom: 12px; }
+.adm-report {
+  background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 14px; margin-bottom: 12px; box-shadow: var(--shadow-sm);
+}
+.adm-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+.adm-type { font-size: 12px; font-weight: 600; color: #fff; background: var(--ocean-3); border-radius: 6px; padding: 2px 8px; }
+.adm-reason { font-size: 13px; font-weight: 600; color: var(--coral); }
+.adm-flag { font-size: 11px; border-radius: 6px; padding: 2px 7px; }
+.adm-removed { background: #fde8ee; color: var(--coral); }
+.adm-gone { background: var(--line); color: var(--muted); }
+.adm-preview { font-size: 14px; color: var(--ink); line-height: 1.5; margin: 4px 0; word-break: break-word; }
+.adm-detail { font-size: 12px; color: var(--muted); margin: 4px 0; }
+.adm-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.adm-meta { font-size: 12px; color: var(--muted); }
+.adm-actions { display: flex; gap: 8px; }
+.adm-btn { border: 1px solid var(--line); background: var(--bg); border-radius: var(--radius-sm); padding: 6px 12px; font-size: 13px; cursor: pointer; transition: all .15s; }
+.adm-resolve:hover { border-color: var(--ocean-3); color: var(--ocean-3); }
+.adm-takedown { border-color: var(--coral); color: var(--coral); font-weight: 600; }
+.adm-takedown:hover { background: var(--coral); color: #fff; }

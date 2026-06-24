@@ -1729,6 +1729,11 @@ async function loadSpotCatches(spotId) {
     el.innerHTML = catches.length
       ? catches.map(catchItemHTML).join("")
       : `<div class="no-reviews">还没有渔获记录，记录你的第一条</div>`;
+    // Delegated handler for the per-catch 🚩 report buttons.
+    el.onclick = (e) => {
+      const b = e.target.closest("[data-report-catch]");
+      if (b) { e.preventDefault(); reportCatchFlow(b.getAttribute("data-report-catch")); }
+    };
   } catch (e) { el.innerHTML = ""; }
 }
 
@@ -1752,10 +1757,49 @@ function catchItemHTML(c) {
       ${meta ? `<div class="catch-meta">${meta}</div>` : ""}
       <div class="catch-foot">
         <span>${escapeHtml(c.user_name || "钓友")}</span>
-        <span>${escapeHtml(date)}${c.engine_version ? ` · 评分快照 v${escapeHtml(c.engine_version)}` : ""}</span>
+        <span class="catch-foot-meta">${escapeHtml(date)}${c.engine_version ? ` · 评分快照 v${escapeHtml(c.engine_version)}` : ""}${window.SF_API?.user ? ` · <button type="button" class="link-report" data-report-catch="${escapeAttr(String(c.id))}" title="举报 Report">🚩</button>` : ""}</span>
       </div>
     </div>`;
 }
+
+// Lightweight moderation report modal. Resolves to {reason, detail} or null (cancelled).
+// Shared by the spot-detail catch list and the insights feed. CSP-safe (no inline handlers).
+function openReportModal() {
+  return new Promise(resolve => {
+    const modal = document.getElementById("reportModal");
+    if (!modal) { // graceful fallback if markup is absent
+      const r = prompt("举报原因 Reason:");
+      resolve(r ? { reason: r.slice(0, 40), detail: "" } : null);
+      return;
+    }
+    const reasons = modal.querySelector("#reportReasons");
+    const detail = modal.querySelector("#reportDetail");
+    const err = modal.querySelector("#reportErr");
+    let chosen = "";
+    detail.value = ""; err.textContent = "";
+    reasons.querySelectorAll(".report-reason").forEach(b => {
+      b.classList.remove("active");
+      b.onclick = () => { chosen = b.dataset.r; reasons.querySelectorAll(".report-reason").forEach(x => x.classList.toggle("active", x === b)); };
+    });
+    const finish = (val) => { modal.classList.add("hidden"); modal.querySelector("#reportSubmit").onclick = null; modal.querySelector("#reportClose").onclick = null; modal.onclick = null; resolve(val); };
+    modal.classList.remove("hidden");
+    modal.querySelector("#reportClose").onclick = () => finish(null);
+    modal.onclick = (e) => { if (e.target === modal) finish(null); };
+    modal.querySelector("#reportSubmit").onclick = () => {
+      if (!chosen) { err.textContent = "请选择一个原因 · Pick a reason"; return; }
+      finish({ reason: chosen, detail: (detail.value || "").trim().slice(0, 500) });
+    };
+  });
+}
+
+async function reportCatchFlow(id) {
+  if (!window.SF_API?.user) { window.SF_AUTH_UI?.openModal("login"); return; }
+  const r = await openReportModal();
+  if (!r) return;
+  try { await window.SF_API.reportCatch(id, r.reason, r.detail); alert("已提交举报，感谢反馈 · Reported. Thank you."); }
+  catch (e) { alert("举报失败 · " + e.message); }
+}
+window.reportCatchFlow = reportCatchFlow;
 
 function bindCatchForm(spot) {
   document.getElementById("catch-login")?.addEventListener("click", () => window.SF_AUTH_UI?.openModal("login"));

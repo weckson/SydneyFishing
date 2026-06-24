@@ -58,6 +58,7 @@
     <button id="insightsBtn" class="icon-btn" title="本周鱼讯">📊 鱼讯</button>
     <button id="communityBtn" class="icon-btn" title="社区论坛">💬 社区</button>
     <button id="notifyBtn" class="icon-btn notify-btn" title="通知" style="display:none">🔔<span id="notifyBadge" class="notify-badge" style="display:none"></span></button>
+    <button id="adminBtn" class="icon-btn" title="审核后台 · Moderation" style="display:none">🛡️ 审核</button>
     <button id="authBtn" class="icon-btn auth-btn" title="登录 / 账号"><span>👤</span> <span id="authBtnLabel">登录</span></button>
     <button id="algoBtn" class="icon-btn" title="算法说明">ℹ️ 算法</button>
     <button id="locateBtn" class="locate-btn"><span>📍</span> 定位我</button>
@@ -159,6 +160,11 @@
   <div class="forum-inner" id="insightsInner"></div>
 </div>
 
+<!-- Moderation panel (in-app view; hash route #/admin; admins only) -->
+<div id="adminView" class="forum-view hidden">
+  <div class="forum-inner" id="adminInner"></div>
+</div>
+
 <!-- Auth modal: login / register -->
 <div id="authModal" class="auth-modal hidden">
   <div class="auth-card">
@@ -175,6 +181,25 @@
     <input type="password" id="authPass" class="auth-input" placeholder="密码 Password（≥8 位）" autocomplete="current-password" />
     <button class="auth-submit" id="authSubmit">登录 Sign in</button>
     <p class="auth-note">仅用于社区互动 · 数据存于澳洲境内 · 不做线下约见</p>
+  </div>
+</div>
+
+<!-- Report (moderation) modal: pick a reason + optional detail -->
+<div id="reportModal" class="auth-modal hidden">
+  <div class="auth-card">
+    <button class="close" id="reportClose" aria-label="关闭">×</button>
+    <h2 class="auth-title">🚩 举报内容 · Report</h2>
+    <p class="auth-sub">请选择原因，管理员会尽快处理 · Pick a reason; our team will review</p>
+    <div class="report-reasons" id="reportReasons">
+      <button type="button" class="report-reason" data-r="不实信息">不实信息</button>
+      <button type="button" class="report-reason" data-r="冒犯/辱骂">冒犯/辱骂</button>
+      <button type="button" class="report-reason" data-r="垃圾广告">垃圾广告</button>
+      <button type="button" class="report-reason" data-r="危险/违规">危险/违规</button>
+      <button type="button" class="report-reason" data-r="其他">其他</button>
+    </div>
+    <textarea id="reportDetail" class="auth-input" rows="3" placeholder="补充说明（可选）· Detail (optional)"></textarea>
+    <div class="auth-err" id="reportErr"></div>
+    <button class="auth-submit" id="reportSubmit">提交举报 · Submit</button>
   </div>
 </div>
 
@@ -286,6 +311,7 @@
 <script src="forum.js"></script>
 <script src="notify.js"></script>
 <script src="insights.js"></script>
+<script src="admin.js"></script>
 
 <!-- PWA bootstrap (SW registration + iOS A2HS hint) — externalized for strict CSP -->
 <script src="pwa-init.js"></script>

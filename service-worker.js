@@ -5,7 +5,7 @@
 // - Open-Meteo weather/marine API → network-first with 10min cache fallback
 // - Leaflet library CDN → cache-first after first load
 
-const CACHE_VERSION = "v1.8.0";
+const CACHE_VERSION = "v1.9.0";
 const SHELL_CACHE = `sf-shell-${CACHE_VERSION}`;
 const TILE_CACHE = `sf-tiles-${CACHE_VERSION}`;
 const API_CACHE = `sf-api-${CACHE_VERSION}`;
@@ -26,6 +26,7 @@ const SHELL_FILES = [
   "./forum.js",
   "./notify.js",
   "./insights.js",
+  "./admin.js",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
