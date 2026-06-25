@@ -38,6 +38,9 @@ services:
       TRUST_PROXY_HOPS: "1"                 # exactly one hop in front: Caddy
       STORAGE_DRIVER: local                 # user photos on the box's disk (uploads volume)
       REQUIRE_EMAIL_VERIFY: "false"
+      # Fishing-intel ingest harness runs automatically (boot + daily) — link items only by default
+      # (free). Set ANTHROPIC_API_KEY in the root .env to also fetch+summarise official pages.
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - uploads:/app/uploads
     # Apply the idempotent schema, then start. Safe on every boot.
