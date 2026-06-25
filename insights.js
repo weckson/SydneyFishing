@@ -65,6 +65,24 @@
       </div>`;
   }
 
+  function intelItem(it) {
+    const title = esc(it.title_cn || it.title || "");
+    const sum = (it.summary_cn || it.summary) ? `<div class="ins-intel-sum">${esc(it.summary_cn || it.summary)}</div>` : "";
+    const href = it.source_url ? (window.safeUrl ? window.safeUrl(it.source_url) : "") : "";
+    const link = href ? `<a href="${esc(href)}" target="_blank" rel="noopener noreferrer">${esc(it.source_name || "来源")} ↗</a>` : esc(it.source_name || "");
+    const kindLabel = ({ regulation: "法规", closure: "禁渔", safety: "安全", report: "鱼情", news: "新闻" })[it.kind] || it.kind;
+    return `<div class="ins-intel-item"><div class="ins-intel-top"><span class="ins-intel-kind k-${esc(it.kind)}">${esc(kindLabel)}</span> <b>${title}</b></div>${sum}<div class="ins-intel-src">${link}</div></div>`;
+  }
+  async function loadIntel() {
+    const el = document.getElementById("insIntel");
+    if (!el) return;
+    if (!window.SF_API || !window.SF_API.available) { el.innerHTML = `<div class="ins-empty">连接后端后显示动态 · Latest needs the backend</div>`; return; }
+    try {
+      const d = await window.SF_API.getIntel({ limit: 10 });
+      el.innerHTML = (d.items && d.items.length) ? d.items.map(intelItem).join("") : `<div class="ins-empty">暂无动态，更新引擎稍后会抓取</div>`;
+    } catch (e) { el.innerHTML = `<div class="ins-empty">动态加载失败</div>`; }
+  }
+
   async function render() {
     view().classList.remove("hidden");
     inner().innerHTML = `<div class="forum-bar"><span class="forum-logo">${ic("chart")}</span><div class="forum-title">本周鱼讯 · What's Biting</div><button class="forum-close" id="insClose">×</button></div><div class="ins-loading">加载中…</div>`;
@@ -88,6 +106,7 @@
         <section class="ins-section"><h3>${ic("trophy")} 热门鱼种 · Top Species</h3>${speciesHtml}</section>
         <section class="ins-section"><h3>📍 热门钓点 · Top Spots</h3>${spotsHtml}</section>
         <section class="ins-section"><h3>${ic("map")} 分区 · By Region</h3>${regionBreakdown(d.topSpots)}</section>
+        <section class="ins-section"><h3>📰 钓鱼动态 · Latest</h3><div id="insIntel" class="ins-intel"><div class="ins-empty">加载中…</div></div></section>
         <section class="ins-section"><h3>${ic("fish")} 最新钓获 · Recent Catches</h3><div class="ins-catch-list">${recentHtml}</div></section>
       </div>`;
     inner().querySelector("#insClose").onclick = close;
@@ -103,6 +122,7 @@
       const b = e.target.closest("[data-report-catch]");
       if (b && window.reportCatchFlow) { e.preventDefault(); window.reportCatchFlow(b.getAttribute("data-report-catch")); }
     };
+    loadIntel();
   }
 
   function close() { if (location.hash.startsWith("#/insights")) location.hash = ""; view().classList.add("hidden"); }

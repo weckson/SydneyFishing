@@ -14,7 +14,7 @@
 
   // 全局元信息：统一的更新日期、免责声明、官方链接（复用 reviews.js _global 的 DPI URL）。
   window.NSW_REGULATIONS_META = {
-    lastUpdated: "2026-06-24",
+    lastUpdated: "2026-06-25",
     dpiUrl: "https://www.dpi.nsw.gov.au/fishing/recreational/resources/saltwater-bag-and-size-limits",
     safetyUrl: "https://www.dpi.nsw.gov.au/fishing/recreational/fishing-safety/rock-fishing-safety",
     disclaimerCn: "数据仅供参考 · 法规以 NSW DPI 官方为准 · 本应用不构成法律建议",
@@ -34,11 +34,11 @@
       noteCn: "黄尾鰤 (Yellowtail Kingfish) 最小 65cm，每日 5 尾。", noteEn: "Yellowtail Kingfish — 65cm min, 5/day."
     },
     Bream: {
-      nameCn: "黑鲷", minSizeCm: 25, maxSizeCm: null, bagLimit: 20, closedMonths: [], protected: false,
-      noteCn: "黑鲷/黄鳍鲷与 Tarwhine 合计每日 20 尾。", noteEn: "Bream & Tarwhine combined bag of 20."
+      nameCn: "黑鲷", minSizeCm: 25, maxSizeCm: null, bagLimit: 20, possessionLimit: 40, closedMonths: [], protected: false,
+      noteCn: "黑鲷/黄鳍鲷与 Tarwhine 合计每日 20 尾；持有上限 40。", noteEn: "Bream & Tarwhine combined bag 20; possession 40."
     },
     Flathead: {
-      nameCn: "沙鳕", minSizeCm: 36, maxSizeCm: 70, bagLimit: 10, closedMonths: [], protected: false,
+      nameCn: "沙鳕", minSizeCm: 36, maxSizeCm: 70, bagLimit: 10, possessionLimit: 20, closedMonths: [], protected: false,
       noteCn: "Dusky Flathead 36–70cm 为可留区间；>70cm 必须放流。每日合计 10 尾。",
       noteEn: "Dusky Flathead slot 36–70cm; release any over 70cm. Combined bag 10."
     },
@@ -47,7 +47,7 @@
       noteCn: "Sand Whiting 最小 27cm，每日 20 尾。", noteEn: "Sand Whiting — 27cm min, 20/day."
     },
     Tailor: {
-      nameCn: "乔鱼/曹白", minSizeCm: 30, maxSizeCm: null, bagLimit: 20, closedMonths: [], protected: false,
+      nameCn: "乔鱼/曹白", minSizeCm: 30, maxSizeCm: null, bagLimit: 20, possessionLimit: 40, closedMonths: [], protected: false,
       noteCn: "Tailor 最小 30cm，每日 20 尾。", noteEn: "Tailor — 30cm min, 20/day."
     },
     Salmon: {
@@ -67,17 +67,17 @@
       noteCn: "鱿鱼/墨鱼/章鱼合计每日 20 只，无尺寸限制。", noteEn: "Squid/cuttlefish/octopus — combined 20/day, no size limit."
     },
     Trevally: {
-      nameCn: "鲹鱼", minSizeCm: null, maxSizeCm: null, bagLimit: 20, closedMonths: [], protected: false,
+      nameCn: "鲹鱼", minSizeCm: null, maxSizeCm: null, bagLimit: 20, possessionLimit: 40, closedMonths: [], protected: false,
       noteCn: "Silver Trevally 无最小尺寸（建议查官方），每日 20 尾。", noteEn: "Silver Trevally — verify min length with DPI, 20/day."
     },
     Luderick: {
-      nameCn: "黑鱼/矶鱼", minSizeCm: 27, maxSizeCm: null, bagLimit: 20, closedMonths: [], protected: false,
+      nameCn: "黑鱼/矶鱼", minSizeCm: 27, maxSizeCm: null, bagLimit: 20, possessionLimit: 40, closedMonths: [], protected: false,
       noteCn: "Luderick (黑鱼) 最小 27cm，每日 20 尾。", noteEn: "Luderick (blackfish) — 27cm min, 20/day."
     },
     Groper: {
       nameCn: "蓝隆头鱼", minSizeCm: null, maxSizeCm: null, bagLimit: 0, closedMonths: [], protected: true,
-      noteCn: "🚫 Eastern Blue Groper 是 NSW 州鱼，禁止矛枪捕捞；线钓近期受严格限制/禁捕——请仅钓获放流 (C&R)，并以官方最新规定为准。",
-      noteEn: "🚫 Eastern Blue Groper (NSW state fish) — no spearfishing; line take heavily restricted/closed recently. Catch & release only; check DPI."
+      noteCn: "🚫 Eastern Blue Groper 是 NSW 州鱼；禁止矛枪捕捞；线钓禁捕已延长至 2028-03-01（2025-03 起 3 年）——仅可钓获放流 (C&R)，以官方为准。",
+      noteEn: "🚫 Eastern Blue Groper (NSW state fish) — no spearfishing; line-fishing take closed until 1 Mar 2028 (3-yr extension from Mar 2025). Catch & release only."
     },
     Bonito: {
       nameCn: "鲣鱼", minSizeCm: null, maxSizeCm: null, bagLimit: 20, closedMonths: [], protected: false,
@@ -90,7 +90,7 @@
   window.SAFETY_CONTENT = {
     // 每个岩钓点都展示的固定提醒。
     rockReminders: [
-      { cn: "穿救生衣 (PFD) — 部分地区强制", en: "Wear a lifejacket (PFD) — mandatory in some areas" },
+      { cn: "穿救生衣 — NSW 多区岩钓法律强制，违者罚 $100", en: "Lifejacket — legally required rock fishing in declared NSW areas ($100 fine)" },
       { cn: "穿防滑钉鞋 / 毡底鞋", en: "Wear cleated / felt-sole rock boots" },
       { cn: "永远不要独自作钓，告知家人行程", en: "Never fish alone; tell someone your plan" },
       { cn: "下竿前查涌浪与天气，背对海面=危险", en: "Check swell & weather first; never turn your back to the sea" },
@@ -106,6 +106,10 @@
       { cn: "4. 结伴而行，手机防水袋，记下最近的天使环 (Angel Ring) 位置。", en: "4. Go with a buddy; waterproof your phone; note the nearest Angel Ring." },
       { cn: "5. 浪一变大立即收竿撤离——没有一条鱼值得用命换。", en: "5. If the swell builds, leave immediately — no fish is worth your life." }
     ],
+    // NSW Rock Fishing Safety Act — lifejackets are LAW in these declared LGAs ($100 fine).
+    lifejacketLGAs: ["Randwick", "Northern Beaches", "Sutherland", "Central Coast", "Lake Macquarie", "Port Stephens", "Ballina", "Richmond Valley"],
+    lifejacketNoteCn: "以下分区岩钓法律强制穿救生衣（成人 AS 4758 50S 以上，12 岁以下需 100 级），违者罚 $100：Randwick、Northern Beaches、Sutherland、Central Coast、Lake Macquarie、Port Stephens、Ballina、Richmond Valley。",
+    lifejacketNoteEn: "Lifejackets are legally mandatory when rock fishing in these LGAs (adult AS 4758 50S+, level 100 for under-12s), $100 fine: Randwick, Northern Beaches, Sutherland, Central Coast, Lake Macquarie, Port Stephens, Ballina, Richmond Valley.",
     disclaimerCn: "本应用不保证安全。岩钓有致命风险，请量力而行。",
     disclaimerEn: "This app is not a safety guarantee. Rock fishing can be fatal — know your limits."
   };

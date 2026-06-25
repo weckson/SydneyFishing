@@ -207,6 +207,38 @@ CREATE TABLE IF NOT EXISTS notifications (
 );
 CREATE INDEX IF NOT EXISTS idx_notif_user ON notifications(user_id, created_at DESC);
 
+-- ---------- fishing-intel ingest (server-side harness: official sources + curated community links) ----------
+-- A periodic backend job upserts items here; the PWA reads them via /api/intel. dedup_hash makes
+-- re-runs idempotent. AI summaries (summary_cn/summary) are filled only when an LLM key is configured.
+CREATE TABLE IF NOT EXISTS fishing_intel (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  dedup_hash  text UNIQUE NOT NULL,
+  scope_type  text NOT NULL,                 -- 'global' | 'region' | 'species' | 'topic'
+  scope_key   text NOT NULL DEFAULT '',      -- e.g. 'harbour', 'Bream', 'safety'
+  kind        text NOT NULL,                 -- 'regulation' | 'closure' | 'safety' | 'report' | 'news'
+  title       text NOT NULL,
+  title_cn    text,
+  summary     text,
+  summary_cn  text,
+  source_url  text,
+  source_name text,
+  lang        char(2) NOT NULL DEFAULT 'en',
+  published_at timestamptz,
+  fetched_at  timestamptz NOT NULL DEFAULT now(),
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_intel_scope ON fishing_intel(scope_type, scope_key, fetched_at DESC);
+CREATE INDEX IF NOT EXISTS idx_intel_kind ON fishing_intel(kind, fetched_at DESC);
+
+CREATE TABLE IF NOT EXISTS ingest_runs (
+  id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  started_at  timestamptz NOT NULL DEFAULT now(),
+  finished_at timestamptz,
+  ok          boolean,
+  items_added integer NOT NULL DEFAULT 0,
+  note        text
+);
+
 -- ---------- email verification tokens ----------
 CREATE TABLE IF NOT EXISTS email_verifications (
   token       text PRIMARY KEY,

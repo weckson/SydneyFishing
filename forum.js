@@ -42,7 +42,9 @@
   function wireBar() {
     inner().querySelectorAll("[data-back]").forEach(b => b.onclick = () => go(b.dataset.back));
     const c = document.getElementById("forumCloseBtn");
-    if (c) c.onclick = () => { history.length > 1 ? history.back() : go(""); if (location.hash.startsWith("#/forum")) go(""); close(); };
+    // Deterministic close → home (map). history.back() could leave the app if the previous
+    // entry was an external page, so clear the hash and hide the overlay directly.
+    if (c) c.onclick = () => { close(); if ((location.hash || "").startsWith("#/forum")) go(""); };
   }
 
   // ---------- board list ----------

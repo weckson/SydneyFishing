@@ -191,7 +191,6 @@
   <div class="topbar-actions">
     <button id="insightsBtn" class="icon-btn" title="本周鱼讯"><svg class="ic"><use href="#ic-chart"></use></svg><span>鱼讯</span></button>
     <button id="communityBtn" class="icon-btn" title="社区论坛"><svg class="ic"><use href="#ic-chat"></use></svg><span>社区</span></button>
-    <button id="compBtn" class="icon-btn" title="线上比赛"><svg class="ic"><use href="#ic-trophy"></use></svg><span>比赛</span></button>
     <button id="notifyBtn" class="icon-btn notify-btn icon-only" title="通知" style="display:none"><svg class="ic"><use href="#ic-bell"></use></svg><span id="notifyBadge" class="notify-badge" style="display:none"></span></button>
     <button id="adminBtn" class="icon-btn" title="审核后台 · Moderation" style="display:none"><svg class="ic"><use href="#ic-shield"></use></svg><span>审核</span></button>
     <button id="authBtn" class="icon-btn auth-btn" title="登录 / 账号"><svg class="ic"><use href="#ic-user"></use></svg><span id="authBtnLabel">登录</span></button>
@@ -315,11 +314,6 @@
 <!-- Gear kits (装备套装; hash routes #/kits, #/kits/:id) -->
 <div id="kitsView" class="forum-view hidden">
   <div class="forum-inner" id="kitsInner"></div>
-</div>
-
-<!-- Online competitions (线上比赛; hash routes #/comp, #/comp/:id) -->
-<div id="compView" class="forum-view hidden">
-  <div class="forum-inner" id="compInner"></div>
 </div>
 
 <!-- Auth modal: login / register -->
@@ -479,7 +473,6 @@
 <script src="scene.js"></script>
 <script src="glossary.js"></script>
 <script src="kits.js"></script>
-<script src="competitions.js"></script>
 
 <!-- PWA bootstrap (SW registration + iOS A2HS hint) — externalized for strict CSP -->
 <script src="pwa-init.js"></script>

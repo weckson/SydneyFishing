@@ -208,10 +208,15 @@ function initMap() {
     drawRadiusCircle(); // refresh in case zoom changed
     if (mapMoveTimer) clearTimeout(mapMoveTimer);
     mapMoveTimer = setTimeout(async () => {
-      // If center has drifted far from where we last fetched conditions, re-fetch
-      if (shouldRefetchConditions()) {
+      // Instant: reflect the nearest preloaded zone's conditions at the new center (no network),
+      // so the weather pill updates as the pin moves across Sydney instead of feeling stuck.
+      const near = nearestRegionConditions(mapCenterLatLng);
+      if (near) { currentWeather = near; conditionsCenterLatLng = mapCenterLatLng; showWeather(); }
+      // Only hit the network when we have no cached conditions near the new center, or drifted far.
+      if (!near || shouldRefetchConditions()) {
         await loadConditionsAt(mapCenterLatLng);
       }
+      ensureRegionalFresh(); // refresh all zones in the background if the cache is stale (>10 min)
       render();
       updateReferenceIndicator();
     }, 350);
@@ -542,6 +547,20 @@ async function loadRegionalConditions() {
   return regionLoading;
 }
 
+// Nearest already-loaded zone's conditions to a point — instant, no network. Lets the center
+// weather pill track the search pin even on small drags (all Sydney zones are preloaded).
+function nearestRegionConditions(latLng) {
+  if (!latLng || !regionConditions.size) return null;
+  let best = null, bestD = Infinity;
+  for (const r of regions) {
+    const rc = regionConditions.get(r.key);
+    if (!rc || (!rc.weather && !rc.marine && !rc.tide)) continue;
+    const d = haversineKm(latLng, [r.lat, r.lng]);
+    if (d < bestD) { bestD = d; best = rc; }
+  }
+  return best;
+}
+
 // Conditions used to SCORE a spot: its own region's data, falling back to map-center data.
 function conditionsForSpot(spot) {
   const rc = regionConditions.get(spotRegionKey.get(spot.id));
@@ -815,6 +834,7 @@ function regSummaryText(reg) {
   else if (!reg.protected) parts.push("无最小尺寸 No min size");
   if (reg.maxSizeCm != null) parts.push(`最大 ${reg.maxSizeCm}cm`);
   if (reg.bagLimit != null && !reg.protected) parts.push(`每日 ${reg.bagLimit} 尾`);
+  if (reg.possessionLimit != null && !reg.protected) parts.push(`持有 ${reg.possessionLimit}`);
   if (reg.closedMonths && reg.closedMonths.length) parts.push("有禁渔期 Closed season");
   return parts.join(" · ");
 }
@@ -935,6 +955,7 @@ function openSafetyTutorial() {
     </div>
     <div class="detail-body">
       <ul class="safety-steps">${steps}</ul>
+      ${sc.lifejacketNoteCn ? `<div class="reg-sanctuary">🦺 ${escapeHtml(sc.lifejacketNoteCn)}<span class="en">${escapeHtml(sc.lifejacketNoteEn || "")}</span></div>` : ""}
       <div class="reg-disclaimer">⚠️ ${escapeHtml(sc.disclaimerCn || "")} · <span class="en">${escapeHtml(sc.disclaimerEn || "")}</span></div>
     </div>`;
   modal.classList.remove("hidden");

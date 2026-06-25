@@ -16,6 +16,13 @@ export const config = {
   cookieSameSite: process.env.COOKIE_SAMESITE || "lax",   // set "none" only if API is on a different site
   requireEmailVerify: (process.env.REQUIRE_EMAIL_VERIFY || "false") === "true",
   sessionTtlDays: 30,
+  // Fishing-intel ingest harness (server-side cron). Stores curated/official source items always;
+  // AI summarisation runs ONLY when ANTHROPIC_API_KEY is set (zero LLM cost otherwise).
+  ingestEnabled: (process.env.INGEST_ENABLED || "true") !== "false",
+  ingestIntervalHours: parseInt(process.env.INGEST_INTERVAL_HOURS || "24", 10),
+  ingestOnBoot: (process.env.INGEST_ON_BOOT || (isProd ? "true" : "false")) === "true",
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY || "",
+  anthropicModel: process.env.ANTHROPIC_MODEL || "claude-haiku-4-5-20251001",
   // Number of proxy hops in front of the app (CloudFront/LB). Used for correct client IP in
   // rate limiting; trusting *all* hops lets clients spoof X-Forwarded-For.
   trustProxyHops: parseInt(process.env.TRUST_PROXY_HOPS || (isProd ? "1" : "0"), 10),

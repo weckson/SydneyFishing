@@ -82,7 +82,25 @@
       explanationEn: "Yellowtail Kingfish — the LBG dream fish, on live bait or jigs." },
     { term: "石首", termEn: "Mulloway / jewfish", category: "species", aka: ["jewie", "mulloway", "石首鱼"],
       explanation: "Mulloway（Jewfish），夜钓大物，活饵/大软虫沉底。最小尺寸 70cm。",
-      explanationEn: "Mulloway (jewfish) — big night target on live bait / large plastics. 70cm min size." }
+      explanationEn: "Mulloway (jewfish) — big night target on live bait / large plastics. 70cm min size." },
+    { term: "冲沟", termEn: "Gutter", category: "technique", aka: ["gutter", "沟"],
+      explanation: "海滩上两道沙坝之间的深色深水带，是 Tailor/Salmon/Whiting 觅食的主战场，退潮时最易辨认。",
+      explanationEn: "A deeper darker channel between sandbars on a beach — prime feeding lane; easiest to read at low tide." },
+    { term: "白沫区", termEn: "Wash / suds", category: "technique", aka: ["wash", "白花", "泡沫区"],
+      explanation: "礁石或海滩浪花翻搅出的白色泡沫水域，溶氧高、藏饵料，黑毛/黑鲷/鲷鱼常在此觅食。",
+      explanationEn: "The aerated white-water zone off rocks/beach — oxygen-rich, holds food; drummer/bream feed here." },
+    { term: "走铅", termEn: "Running sinker", category: "rig", aka: ["滑铅", "通心铅"],
+      explanation: "铅坠穿在主线上可滑动，鱼咬饵时感觉不到铅重，河口底钓常用。",
+      explanationEn: "Sinker runs free on the line so the fish feels no weight on the take — common estuary bottom rig." },
+    { term: "钢丝前导", termEn: "Wire trace", category: "tackle", aka: ["wire", "钢丝", "trace"],
+      explanation: "Tailor、狐鲣等利齿鱼用的钢丝前导，防止咬断子线。",
+      explanationEn: "A short wire leader for toothy fish like tailor — stops bite-offs." },
+    { term: "空军", termEn: "Donut / blanked", category: "technique", aka: ["donut", "剃光头", "放空"],
+      explanation: "一条没钓到，空手而归。澳洲俚语 'donut'（零）或 'blanked'。",
+      explanationEn: "Caught nothing — went home empty. Aussie slang: 'donut' (zero) or 'blanked'." },
+    { term: "达标鱼", termEn: "Legal / keeper", category: "species", aka: ["legal", "keeper", "够尺寸"],
+      explanation: "达到法定最小尺寸、可合法带走的鱼；不够尺寸叫 undersize，必须放流。",
+      explanationEn: "A fish at/over the legal min size you may keep; under that is 'undersize' and must be released." }
   ];
 
   // ---------- view ----------

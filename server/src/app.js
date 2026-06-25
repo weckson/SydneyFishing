@@ -15,8 +15,9 @@ import mediaRoutes from "./routes/media.routes.js";
 import forumRoutes from "./routes/forum.routes.js";
 import notificationRoutes from "./routes/notifications.routes.js";
 import insightsRoutes from "./routes/insights.routes.js";
-import competitionsRoutes from "./routes/competitions.routes.js";
+import intelRoutes from "./routes/intel.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import { startScheduler } from "./ingest/scheduler.js";
 
 export async function buildApp() {
   const app = Fastify({
@@ -72,8 +73,11 @@ export async function buildApp() {
   await app.register(forumRoutes, { prefix: "/api/forum" });
   await app.register(notificationRoutes, { prefix: "/api/notifications" });
   await app.register(insightsRoutes, { prefix: "/api/insights" });
-  await app.register(competitionsRoutes, { prefix: "/api/competitions" });
+  await app.register(intelRoutes, { prefix: "/api/intel" });
   await app.register(adminRoutes, { prefix: "/api/admin" });
+
+  // Start the periodic fishing-intel ingest harness (non-blocking; see ingest/scheduler.js).
+  startScheduler(app);
 
   return app;
 }

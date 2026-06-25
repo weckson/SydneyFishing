@@ -124,9 +124,15 @@
     // insights ("what's biting") — windowDays ∈ 7|14|30 for the weekly report
     getInsights(windowDays) { return req("/api/insights" + (windowDays ? `?windowDays=${encodeURIComponent(windowDays)}` : "")); },
 
-    // online competitions (read-only; leaderboard derived from public catch reports)
+    // online competitions (read-only; leaderboard derived from public catch reports) — dormant
     getCompetitions() { return req("/api/competitions"); },
-    getCompetitionLeaderboard(id) { return req(`/api/competitions/${encodeURIComponent(id)}/leaderboard`); }
+    getCompetitionLeaderboard(id) { return req(`/api/competitions/${encodeURIComponent(id)}/leaderboard`); },
+
+    // fishing-intel feed (server-side ingest harness): official closures/safety + curated report links
+    getIntel(params) {
+      const qs = new URLSearchParams(params || {}).toString();
+      return req("/api/intel" + (qs ? "?" + qs : ""));
+    }
   };
 
   window.SF_API = SF_API;

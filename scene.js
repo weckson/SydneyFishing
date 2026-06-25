@@ -98,6 +98,11 @@
         </section>
 
         <section>
+          <h4>📰 ${esc(species)} 动态 · Latest</h4>
+          <div id="sceneIntel" class="ins-intel"><div class="catch-loading">加载中…</div></div>
+        </section>
+
+        <section>
           <h4>现场提示 · Local Tips</h4>
           <p>${esc(spot.tipsCn)}</p>
           <p class="en">${esc(spot.tips)}</p>
@@ -133,6 +138,24 @@
     }
 
     loadSceneCatches(spot.id, species);
+    loadSceneIntel(species);
+  }
+
+  // Per-species fishing-intel (curated report links + any official summaries) from the ingest harness.
+  async function loadSceneIntel(species) {
+    const el = document.getElementById("sceneIntel");
+    if (!el) return;
+    const api = window.SF_API;
+    if (!api || !api.available) { el.innerHTML = `<div class="no-reviews">连接后端后显示动态 · needs the backend</div>`; return; }
+    try {
+      const d = await api.getIntel({ species, limit: 6 });
+      el.innerHTML = (d.items && d.items.length) ? d.items.map(it => {
+        const href = it.source_url && window.safeUrl ? window.safeUrl(it.source_url) : "";
+        const link = href ? `<a href="${escA(href)}" target="_blank" rel="noopener noreferrer">${esc(it.source_name || "来源")} ↗</a>` : esc(it.source_name || "");
+        const sum = (it.summary_cn || it.summary) ? `<div class="ins-intel-sum">${esc(it.summary_cn || it.summary)}</div>` : "";
+        return `<div class="ins-intel-item"><div class="ins-intel-top"><b>${esc(it.title_cn || it.title || "")}</b></div>${sum}<div class="ins-intel-src">${link}</div></div>`;
+      }).join("") : `<div class="no-reviews">暂无动态</div>`;
+    } catch (e) { el.innerHTML = ""; }
   }
 
   // Species-filtered recent intel (reuses the per-spot catches API + app.js catch renderer).
