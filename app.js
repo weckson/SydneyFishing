@@ -334,8 +334,14 @@ function drawSpotMarkers(bestId = null, topIds = new Set()) {
 
 // ---------- Tackle shops layer (toggleable; 本地渔具店) ----------
 function shopIcon() {
-  const html = `<div style="background:#7c3aed;border:2px solid #fff;width:14px;height:14px;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`;
-  return L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+  // Bold magenta teardrop pin + white anchor glyph — stands out clearly from the round spot dots.
+  const html = `<div class="shop-pin">
+    <svg viewBox="0 0 26 36" width="28" height="38" aria-hidden="true">
+      <path d="M13 1C6.4 1 1 6.3 1 13c0 8.6 12 22 12 22s12-13.4 12-22C25 6.3 19.6 1 13 1Z" fill="#e6007e" stroke="#fff" stroke-width="2"/>
+    </svg>
+    <svg class="shop-pin-ic" viewBox="0 0 24 24" aria-hidden="true"><use href="#ic-anchor"></use></svg>
+  </div>`;
+  return L.divIcon({ html, className: "shop-divicon", iconSize: [28, 38], iconAnchor: [14, 37], popupAnchor: [0, -34] });
 }
 function drawShopMarkers() {
   shopMarkers.forEach(m => map.removeLayer(m));
