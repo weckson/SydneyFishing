@@ -52,6 +52,8 @@ let map, userMarker, userLatLng = null;
 let spotMarkers = [];
 let shopMarkers = [];
 let shopsVisible = false;
+let depthLayer = null;
+let depthVisible = false;
 let currentWeather = null;  // { weather, marine, tide, sun }
 let sortedSpots = [];
 let currentMode = "fish";   // default: fish-first
@@ -232,7 +234,7 @@ function initMap() {
   mapCenterLatLng = [c0.lat, c0.lng];
   drawSpotMarkers();
   drawRadiusCircle();
-  addShopsControl();
+  addLayerControls();
 
   // Dynamic: on move (live) keep circle centered; on moveend update scoring.
   map.on("move", () => {
@@ -352,15 +354,39 @@ function toggleShops() {
   const btn = document.getElementById("shopsToggle");
   if (btn) btn.classList.toggle("active", shopsVisible);
 }
-// Custom Leaflet control: a toggle to show/hide the tackle-shop layer.
-function addShopsControl() {
+
+// ---------- Water-depth overlay (大致水深) ----------
+// GEBCO global bathymetry WMS — coarse but enough for a rough "how deep is this water" read.
+// Semi-transparent, sits under the markers; toggled on demand.
+function toggleDepth() {
+  depthVisible = !depthVisible;
+  if (depthVisible) {
+    if (!depthLayer) {
+      depthLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv", {
+        layers: "GEBCO_LATEST", format: "image/png", transparent: true,
+        opacity: 0.55, attribution: "GEBCO bathymetry"
+      });
+    }
+    depthLayer.addTo(map);
+  } else if (depthLayer) {
+    map.removeLayer(depthLayer);
+  }
+  const btn = document.getElementById("depthToggle");
+  if (btn) btn.classList.toggle("active", depthVisible);
+}
+
+// Custom Leaflet control: toggles for the tackle-shop + water-depth layers.
+function addLayerControls() {
   if (!map || !L.control) return;
   const ctl = L.control({ position: "topleft" });
   ctl.onAdd = function () {
     const d = L.DomUtil.create("div", "leaflet-bar shops-ctl");
-    d.innerHTML = `<button id="shopsToggle" type="button" title="显示/隐藏渔具店 · Tackle shops">${svgIcon("anchor")}<span>渔具店</span></button>`;
+    d.innerHTML =
+      `<button id="shopsToggle" type="button" title="显示/隐藏渔具店 · Tackle shops">${svgIcon("anchor")}<span>渔具店</span></button>` +
+      `<button id="depthToggle" type="button" title="显示/隐藏大致水深 · Water depth">${svgIcon("wave")}<span>水深</span></button>`;
     L.DomEvent.disableClickPropagation(d);
-    d.querySelector("button").addEventListener("click", toggleShops);
+    d.querySelector("#shopsToggle").addEventListener("click", toggleShops);
+    d.querySelector("#depthToggle").addEventListener("click", toggleDepth);
     return d;
   };
   ctl.addTo(map);
@@ -570,7 +596,7 @@ function tideFactorFor(spot, tide) {
 // total), so every spot is scored with its own area's weather/swell/tide instead of
 // whatever happens to be at the map center.
 const REGION_GRID_DEG = 0.2;
-const REGION_TTL_MS = 10 * 60 * 1000;
+const REGION_TTL_MS = 6 * 60 * 1000;
 let regions = [];                 // [{ key, lat, lng }]
 let spotRegionKey = new Map();    // spot id → region key
 let regionConditions = new Map(); // region key → { weather, marine, tide }
@@ -1317,6 +1343,8 @@ function showDetail(id) {
 
       ${renderAccessSection(s.id)}
 
+      ${renderNearestShopsSection(s)}
+
       <section>
         <h4>导航 · Directions</h4>
         <a class="nav-btn" href="https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lng}" target="_blank">🧭 在 Google 地图打开路线</a>
@@ -1371,22 +1399,7 @@ function showDetail(id) {
     // Race guard: if the user has since opened a DIFFERENT spot, this resolved fetch belongs to
     // an old detail view — drop it so it can't clobber the spot now on screen.
     if (currentDetail.spotId !== s.id) return;
-    const box = document.getElementById("spotConditions");
-    if (box) box.innerHTML = renderSpotConditionsHTML(data);
-    const refined = scoreSpot(s, referencePoint(), data, currentMode);
-    const num = document.getElementById("detailScoreNum");
-    const bar = document.getElementById("detailScoreBar");
-    const why = document.getElementById("whyList");
-    const note = document.getElementById("whyNote");
-    if (num) num.textContent = toDisplayScore(refined.displayScore);
-    if (bar) bar.style.width = toDisplayScore(refined.displayScore) + "%";
-    if (why) why.innerHTML = refined.reasons.map(r => `<li>${r}</li>`).join("") || "<li>当前无特别加减分因素</li>";
-    if (note) note.textContent = `✓ 已按本点实时海况精算 · ${formatTime(new Date(data.fetchedAt))}`;
-    // Refresh the rock-fishing go/no-go banner to match the refined per-spot snapshot.
-    const sv = document.getElementById("safetyVerdict");
-    if (sv) { sv.innerHTML = renderSafetyVerdict(s, safetyVerdict(s, refined.snapshot)); bindSafetyVerdict(); }
-    // Catch reports logged from now on freeze THIS refined (per-spot) snapshot.
-    currentDetail.snapshot = refined.snapshot;
+    applyRefinedConditions(s, data);
   }).catch(err => {
     if (currentDetail.spotId !== s.id) return;
     // Per-spot refine failed. If we had seeded regional data, keep it on screen (don't blank it).
@@ -1591,11 +1604,11 @@ async function loadConditionsAt(latLng) {
 // ---------- Per-spot conditions cache (10 min TTL) ----------
 // Keyed by spot id → { weather, marine, tide, fetchedAt }
 const spotConditionsCache = new Map();
-const SPOT_CACHE_TTL_MS = 10 * 60 * 1000;
+const SPOT_CACHE_TTL_MS = 6 * 60 * 1000;
 
-async function fetchSpotConditions(spot) {
+async function fetchSpotConditions(spot, force = false) {
   const cached = spotConditionsCache.get(spot.id);
-  if (cached && (Date.now() - cached.fetchedAt) < SPOT_CACHE_TTL_MS) {
+  if (!force && cached && (Date.now() - cached.fetchedAt) < SPOT_CACHE_TTL_MS) {
     return cached;
   }
   const [weather, marine, tide] = await Promise.all([
@@ -1606,6 +1619,38 @@ async function fetchSpotConditions(spot) {
   const result = { weather, marine, tide, fetchedAt: Date.now() };
   spotConditionsCache.set(spot.id, result);
   return result;
+}
+
+// Apply freshly-fetched conditions to the open detail: re-render the panel, re-score, refresh the
+// safety verdict + "why today", and freeze the new snapshot. Used on open AND on manual refresh.
+function applyRefinedConditions(s, data) {
+  const box = document.getElementById("spotConditions");
+  if (box) box.innerHTML = renderSpotConditionsHTML(data);
+  bindCondRefresh(s);
+  const refined = scoreSpot(s, referencePoint(), data, currentMode);
+  const num = document.getElementById("detailScoreNum");
+  const bar = document.getElementById("detailScoreBar");
+  const why = document.getElementById("whyList");
+  const note = document.getElementById("whyNote");
+  if (num) num.textContent = toDisplayScore(refined.displayScore);
+  if (bar) bar.style.width = toDisplayScore(refined.displayScore) + "%";
+  if (why) why.innerHTML = refined.reasons.map(r => `<li>${r}</li>`).join("") || "<li>当前无特别加减分因素</li>";
+  if (note) note.textContent = `✓ 已按本点实时海况精算 · ${formatTime(new Date(data.fetchedAt))}`;
+  const sv = document.getElementById("safetyVerdict");
+  if (sv) { sv.innerHTML = renderSafetyVerdict(s, safetyVerdict(s, refined.snapshot)); bindSafetyVerdict(); }
+  if (currentDetail.spotId === s.id) currentDetail.snapshot = refined.snapshot;
+}
+
+// Wire the ↻ 刷新 button in the conditions footnote → force a fresh fetch (bypass cache) + re-apply.
+function bindCondRefresh(s) {
+  const b = document.getElementById("condRefresh");
+  if (!b) return;
+  b.addEventListener("click", () => {
+    b.disabled = true; b.textContent = "刷新中…";
+    fetchSpotConditions(s, true)
+      .then(data => { if (currentDetail.spotId === s.id) applyRefinedConditions(s, data); })
+      .catch(() => { b.disabled = false; b.textContent = "↻ 刷新"; });
+  });
 }
 
 // Render the conditions panel for a specific spot (used in the detail modal).
@@ -1647,7 +1692,7 @@ function renderSpotConditionsHTML(data) {
     ${primeBlock}
     <div class="spot-cond-footnote">${data._seed
       ? `区域实时数据 · 正在按本点坐标精算…`
-      : `数据时间 ${formatTime(new Date(data.fetchedAt))} · 基于钓点坐标实时计算 · 潮汐时间已按悉尼官方潮表校准`}</div>
+      : `数据时间 ${formatTime(new Date(data.fetchedAt))}（${Math.max(0, Math.round((Date.now() - data.fetchedAt) / 60000))} 分钟前）· 已按悉尼官方潮表校准 <button type="button" id="condRefresh" class="cond-refresh">↻ 刷新</button>`}</div>
   `;
 }
 
@@ -2008,6 +2053,27 @@ function renderCamsSection(spot) {
       <h4>📹 实时浪况 · Live Cams &amp; Wave Data</h4>
       <div class="cam-list">${rows}</div>
       <div class="reg-disclaimer">外部链接，新窗口打开 · External links open in a new tab</div>
+    </section>`;
+}
+
+// Nearest tackle shops to a spot (logistics — where to grab bait/gear on the way).
+function renderNearestShopsSection(spot) {
+  if (typeof window.nearestShops !== "function") return "";
+  const shops = window.nearestShops(spot.lat, spot.lng, 2);
+  if (!shops.length) return "";
+  const rows = shops.map(sh => {
+    const url = safeUrl(sh.url);
+    const link = url ? ` · <a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">地图/营业时间 ↗</a>` : "";
+    return `<div class="shop-row">
+      <div class="shop-row-top"><b>${escapeHtml(sh.nameCn || sh.name)}</b> <span class="shop-dist">${sh.distKm.toFixed(1)} km</span></div>
+      <div class="shop-row-sub">${escapeHtml(sh.suburb || "")}${sh.hours ? " · " + escapeHtml(sh.hours) : ""}${link}</div>
+    </div>`;
+  }).join("");
+  return `
+    <section>
+      <h4>🛒 最近渔具店 · Nearest Tackle Shops</h4>
+      <div class="shop-list">${rows}</div>
+      <div class="reg-disclaimer">直线距离估算；营业时间为参考，以 Google 地图为准 · hours are a guide, check Maps</div>
     </section>`;
 }
 
