@@ -111,7 +111,7 @@ window.SYDNEY_SPOTS = [
     id: "silver-beach",
     name: "Silver Beach, Kurnell",
     nameCn: "银滩 · 库内尔",
-    lat: -34.0140, lng: 151.2100,
+    lat: -34.0075, lng: 151.1940,
     type: "beach",
     baseScore: 77,
     species: ["Whiting", "Flathead", "Bream", "Salmon"],
@@ -301,7 +301,7 @@ window.SYDNEY_SPOTS = [
     id: "gunnamatta",
     name: "Gunnamatta Bay, Port Hacking",
     nameCn: "冈那玛塔湾 · 霍金港",
-    lat: -34.0720, lng: 151.1480,
+    lat: -34.0640, lng: 151.1500,
     type: "estuary",
     baseScore: 74,
     species: ["Flathead", "Whiting", "Bream", "Tailor"],
@@ -335,7 +335,7 @@ window.SYDNEY_SPOTS = [
     id: "cape-solander",
     name: "Cape Solander",
     nameCn: "索兰德角",
-    lat: -34.0130, lng: 151.2270,
+    lat: -34.0166, lng: 151.2318,
     type: "rock",
     baseScore: 87,
     species: ["Tailor", "Salmon", "Kingfish", "Bonito"],
@@ -811,7 +811,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "wanda-beach", name: "Wanda Beach", nameCn: "万达海滩",
-    lat: -34.0430, lng: 151.1720, type: "beach", baseScore: 75,
+    lat: -34.0424, lng: 151.1631, type: "beach", baseScore: 75,
     species: ["Salmon", "Tailor", "Whiting", "Jewfish"],
     best: "Dawn gutters, night jewfish.", bestCn: "晨冲沟、夜石首。",
     techniques: ["Pilchards", "Live squid"],
@@ -821,7 +821,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "greenhills", name: "Greenhills Beach", nameCn: "绿山海滩",
-    lat: -34.0320, lng: 151.1810, type: "beach", baseScore: 72,
+    lat: -34.0370, lng: 151.1726, type: "beach", baseScore: 72,
     species: ["Salmon", "Tailor", "Whiting"],
     best: "Dawn/dusk gutters.", bestCn: "晨昏冲沟最佳。",
     techniques: ["Metals", "Beach worms"],
@@ -1122,7 +1122,7 @@ window.SYDNEY_SPOTS = [
   // ================== Kurnell Peninsula · 顶级 land-based ==================
   {
     id: "inscription-point", name: "Inscription Point, Kurnell", nameCn: "铭文角 · 库内尔",
-    lat: -34.0050, lng: 151.2270, type: "rock", baseScore: 88,
+    lat: -34.0017, lng: 151.2236, type: "rock", baseScore: 88,
     species: ["Kingfish", "Bonito", "Tailor", "Drummer", "Salmon"],
     best: "Dawn live bait on run-in tide.", bestCn: "清晨涨潮活饵最佳。",
     techniques: ["Live yakkas", "Metal slugs", "Ganged pilchards"],
@@ -1136,7 +1136,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "cape-baily", name: "Cape Baily", nameCn: "贝利角",
-    lat: -34.0380, lng: 151.2290, type: "rock", baseScore: 85,
+    lat: -34.0351, lng: 151.2222, type: "rock", baseScore: 85,
     species: ["Tailor", "Salmon", "Drummer", "Kingfish"],
     best: "Dawn metals.", bestCn: "清晨铁板最佳。",
     techniques: ["Metal slugs", "Gang-hook pilchards"],
@@ -1146,7 +1146,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "tabbagai", name: "Tabbagai Gap", nameCn: "塔巴盖峡",
-    lat: -34.0460, lng: 151.2250, type: "rock", baseScore: 80,
+    lat: -34.0370, lng: 151.2175, type: "rock", baseScore: 80,
     species: ["Drummer", "Bream", "Groper"],
     best: "Winter high tide with cunjevoi.", bestCn: "冬季高潮海鞘钓。",
     techniques: ["Float rig", "Red crab"],
@@ -1166,7 +1166,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "boat-harbour-kurnell", name: "Boat Harbour, Kurnell", nameCn: "船湾 · 库内尔",
-    lat: -34.0620, lng: 151.1960, type: "rock", baseScore: 83,
+    lat: -34.0398, lng: 151.1982, type: "rock", baseScore: 83,
     species: ["Kingfish", "Tailor", "Drummer", "Salmon"],
     best: "Dawn with live bait.", bestCn: "清晨活饵最佳。",
     techniques: ["Live yakkas", "Metals"],
@@ -1176,7 +1176,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "voodoo-point", name: "Voodoo Point, Cronulla", nameCn: "伏都角 · 克罗努拉",
-    lat: -34.0700, lng: 151.1700, type: "rock", baseScore: 82,
+    lat: -34.0735, lng: 151.1530, type: "rock", baseScore: 82,
     species: ["Drummer", "Bream", "Tailor", "Groper"],
     best: "Winter high tide.", bestCn: "冬季高潮最佳。",
     techniques: ["Cunjevoi", "Float rigs"],
@@ -1186,7 +1186,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "bass-flinders", name: "Bass & Flinders Point", nameCn: "巴斯与弗林德斯角",
-    lat: -34.0720, lng: 151.1730, type: "rock", baseScore: 81,
+    lat: -34.0729, lng: 151.1535, type: "rock", baseScore: 81,
     species: ["Kingfish", "Tailor", "Salmon", "Drummer"],
     best: "Dawn on incoming tide.", bestCn: "清晨涨潮最佳。",
     techniques: ["Live bait", "Metal slugs"],
@@ -1196,7 +1196,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "shelly-headland", name: "Shelly Headland, Cronulla", nameCn: "谢利岬 · 克罗努拉",
-    lat: -34.0680, lng: 151.1620, type: "rock", baseScore: 78,
+    lat: -34.0650, lng: 151.1575, type: "rock", baseScore: 78,
     species: ["Drummer", "Bream", "Luderick"],
     best: "Winter drummer on cunje.", bestCn: "冬季黑毛最佳。",
     techniques: ["Float rig", "Cunjevoi baits"],
@@ -2029,7 +2029,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "horderns-beach", name: "Horderns Beach, Bundeena", nameCn: "霍尔顿斯海滩 · 邦德纳",
-    lat: -34.0840, lng: 151.1560, type: "harbour", baseScore: 70,
+    lat: -34.0839, lng: 151.1513, type: "harbour", baseScore: 70,
     species: ["Flathead", "Whiting", "Bream"],
     best: "High tide flats.", bestCn: "高潮沙滩最佳。",
     techniques: ["Nippers", "Beach worms"],
@@ -2042,7 +2042,7 @@ window.SYDNEY_SPOTS = [
   // ==================== Cronulla 补充 ====================
   {
     id: "oak-park", name: "Oak Park, Cronulla", nameCn: "橡树公园 · 克罗努拉",
-    lat: -34.0680, lng: 151.1700, type: "rock", baseScore: 76,
+    lat: -34.0699, lng: 151.1562, type: "rock", baseScore: 76,
     species: ["Bream", "Drummer", "Luderick", "Tailor"],
     best: "Morning run-in tide.", bestCn: "清晨涨潮最佳。",
     techniques: ["Float rig", "Cunjevoi"],
@@ -2053,7 +2053,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "shelly-beach-cronulla", name: "Shelly Beach, Cronulla", nameCn: "贝壳海滩 · 克罗努拉",
-    lat: -34.0620, lng: 151.1680, type: "beach", baseScore: 69,
+    lat: -34.0641, lng: 151.1555, type: "beach", baseScore: 69,
     species: ["Whiting", "Bream", "Flathead"],
     best: "High tide.", bestCn: "高潮最佳。",
     techniques: ["Nippers", "Beach worms"],
@@ -2064,7 +2064,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "salmon-haul", name: "Salmon Haul Reserve, Cronulla", nameCn: "捕鲑保留地 · 克罗努拉",
-    lat: -34.0790, lng: 151.1590, type: "estuary",
+    lat: -34.0705, lng: 151.1495, type: "estuary",
     baseScore: 76,
     species: ["Tailor", "Flathead", "Bream", "Jewfish"],
     best: "Run-out tide evening.", bestCn: "傍晚退潮最佳。",
@@ -2076,7 +2076,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "elouera-beach", name: "Elouera Beach", nameCn: "艾露拉海滩",
-    lat: -34.0510, lng: 151.1690, type: "beach", baseScore: 75,
+    lat: -34.0466, lng: 151.1593, type: "beach", baseScore: 75,
     species: ["Salmon", "Tailor", "Whiting", "Jewfish"],
     best: "Dawn/dusk gutters.", bestCn: "晨昏冲沟最佳。",
     techniques: ["Pilchards gangs", "Beach worms"],
