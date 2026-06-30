@@ -46,6 +46,7 @@ rigs.js                 window.RIGS_BY_SPECIES — rig recommendations
 seasons.js              window.SPECIES_SEASONS + SEASON_SPECIES_WEIGHTS
 regulations.js          window.NSW_REGULATIONS + NSW_REGULATIONS_META + SAFETY_CONTENT (NSW size/bag/safety)
 regions.js              window.SF_REGIONS + spotRegionId() — client-side spot→region buckets
+cams.js                 window.SF_CAMS + camsForRegion() — live wave/surf monitoring links
 reviews.js              window.SEED_REVIEWS — external discussion links
 app.js                  CORE: Leaflet map + scoring engine v1.5 + spot search + spot detail
 api.js                  window.SF_API — backend HTTP client (degrades gracefully)
@@ -167,7 +168,10 @@ server/
   summarisation (`summarize.js`, Anthropic Messages API, no SDK) is **OPTIONAL — gated on
   `ANTHROPIC_API_KEY`** (no key = link items only, zero LLM cost). Admin trigger:
   `POST /api/intel/run`. Env documented in `.env.example` (`INGEST_*`, `ANTHROPIC_*`); the prod
-  compose passes `ANTHROPIC_API_KEY` through.
+  compose passes `ANTHROPIC_API_KEY` through. Sources (`sources.js`) are **diversified, not
+  Reddit-only**: 小红书 (Chinese) / Fishraider-Deckee / YouTube how-to / bilibili / Reddit + a
+  `tutorial` kind that feeds the insights "🎓 新手必看" section. Live wave cams are a SEPARATE
+  static layer (`cams.js`, frontend) — CSP-safe links (MHL buoys + Swellnet), not part of this feed.
 - **Competitions = dormant.** `competitions.routes.js` + the `competitions` table exist (online-only
   leaderboard derived from public catches) but were **removed from the UX** by product decision —
   the route is unregistered and the frontend unwired. Kept for easy revival; don't re-enable without
