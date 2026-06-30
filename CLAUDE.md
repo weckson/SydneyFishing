@@ -44,14 +44,20 @@ spots.js                window.SYDNEY_SPOTS — 205 spot objects (the core datas
 access.js               window.ACCESS_DATA — transport/terrain per spot
 rigs.js                 window.RIGS_BY_SPECIES — rig recommendations
 seasons.js              window.SPECIES_SEASONS + SEASON_SPECIES_WEIGHTS
+regulations.js          window.NSW_REGULATIONS + NSW_REGULATIONS_META + SAFETY_CONTENT (NSW size/bag/safety)
+regions.js              window.SF_REGIONS + spotRegionId() — client-side spot→region buckets
 reviews.js              window.SEED_REVIEWS — external discussion links
-app.js                  CORE: Leaflet map + scoring engine v1.4 + spot detail
+app.js                  CORE: Leaflet map + scoring engine v1.5 + spot search + spot detail
 api.js                  window.SF_API — backend HTTP client (degrades gracefully)
 auth-ui.js              window.SF_AUTH_UI — login/register modal
 forum.js                community forum view (hash routes #/forum/...)
 notify.js               notifications bell + polling
 insights.js             本周鱼讯 weekly catch insights (#/insights)
 admin.js                moderation panel (#/admin; report triage + takedown, admins only)
+scene.js                鱼种×钓点 decision page (#/scene/:spotId/:species) — reuses app.js building blocks
+glossary.js             window.SF_GLOSSARY — zh/en fishing-term glossary (#/glossary)
+kits.js                 window.SF_KITS — scenario gear kits (#/kits)
+competitions.js         online-comp view (#/comp) — DORMANT (unwired; kept for revival)
 pwa-init.js             SW registration + iOS A2HS hint
 service-worker.js       offline cache (cache-first; bump version on PWA release)
 manifest.json, icons/   PWA manifest + app icons
@@ -71,7 +77,9 @@ server/
   src/photos.js         sharp resize + EXIF/GPS strip
   src/mailer.js         dev-log mailer; SES in prod
   src/migrate.js        applies db/schema.sql (idempotent)
-  src/routes/*.routes.js   auth, reviews, catches, media, forum, notifications, insights, admin
+  src/routes/*.routes.js   auth, reviews, catches, media, forum, notifications, insights, intel, admin
+                           (competitions.routes.js present but UNREGISTERED — dormant)
+  src/ingest/           fishing-intel harness: sources · fetcher · summarize (opt LLM) · run · scheduler
   db/schema.sql         Postgres schema (all CREATE ... IF NOT EXISTS)
   .env.example          copy to .env (gitignored); never commit secrets
 ```
@@ -80,29 +88,43 @@ server/
 
 - **Global namespace pattern.** Data modules attach to `window.*`
   (`SYDNEY_SPOTS`, `ACCESS_DATA`, `RIGS_BY_SPECIES`, `SPECIES_SEASONS`,
-  `SEASON_SPECIES_WEIGHTS`, `SEED_REVIEWS`, `SF_API`, `SF_AUTH_UI`). `app.js` and
-  the view modules define top-level functions in global scope. **`<script>` load
-  order in `index.html` is the dependency graph** — data/`api.js`/`auth-ui.js`
-  load before `app.js`, which loads before `forum.js`/`notify.js`/`insights.js`/`admin.js`.
+  `SEASON_SPECIES_WEIGHTS`, `NSW_REGULATIONS`/`SAFETY_CONTENT`, `SF_REGIONS`, `SEED_REVIEWS`,
+  `SF_GLOSSARY`, `SF_KITS`, `SF_API`, `SF_AUTH_UI`). `app.js` and the view modules define
+  top-level functions in global scope (the view modules call `window.*` helpers defined in
+  `app.js`). **`<script>` load order in `index.html` is the dependency graph** — data modules
+  (incl. `regulations.js`/`regions.js`) + `api.js`/`auth-ui.js` load before `app.js`, which loads
+  before the view modules `forum.js`/`notify.js`/`insights.js`/`admin.js`/`scene.js`/`glossary.js`/`kits.js`.
   Adding a frontend file = add a `<script>` in `index.html` (right position) **and** add it to
   `SHELL_FILES` in `service-worker.js` (and bump the SW cache version). The prod Caddy image
   auto-serves any root-level `*.js/*.css/*.html/*.json`, so no deploy-file edit is needed.
-- **Scoring engine (v1.4, in `app.js`).** `scoreSpot(spot, refLoc, cond, mode)`
-  returns the 0–100 score plus an immutable factor breakdown. Formula:
+- **Scoring engine (v1.5, in `app.js`).** `scoreSpot(spot, refLoc, cond, mode)`
+  returns a **finished** 0–100 `displayScore` plus an immutable factor breakdown.
+  The live multiplier product is:
 
   ```
-  displayScore = toDisplayScore(baseScore × weather × tide × time × moon × season × access)
+  condScore = baseScore × weather × tide × time × moon × season × access
+  display   = displayScoreFor(baseScore, condScore / baseScore)   // shown 0–100
   ```
 
-  Distance is **never** in the score — it only affects ranking in `near`/`family`
-  modes. `mode` ∈ `fish` | `near` | `family`. Helpers: `tideFactorFor`,
-  `seasonFactorFor`, `toDisplayScore`. The full factor reference lives in the
-  "算法说明 / Algorithm" modal in `index.html` — keep the two in sync if you
-  change weights. Every score emits a `conditions_snapshot` (frozen weather/tide/
-  moon/season + `engineVersion`) — this is what catch reports persist so scoring
-  can later be calibrated against real outcomes. **Don't break the snapshot shape.**
-- **Live data.** Weather/marine/tide come from Open-Meteo, fetched per ~22 km
-  coastal zone (not one map-center call). Times computed in Sydney timezone.
+  `displayScoreFor` (v1.4.1+ **reputation-anchor + conditions-swing**) maps the spot's
+  reputation band + the live product onto the full 0–100 scale: a neutral day reads ≈ the
+  spot's reputation band, a great day → ~100 (the old direct clamp crammed everything into
+  ~32–88). **Rank on `.score` (= condScore × distancePenalty), NEVER on `.displayScore`** —
+  sorting on displayScore reorders the board. Distance is never in the score; it only affects
+  ranking in `near`/`family`. `mode` ∈ `fish` | `near` | `family`. Helpers: `tideFactorFor`,
+  `seasonFactorFor` (**strength-weighted**: each target species' season curve weighted by its
+  strength; species absent from `SPECIES_SEASONS` are skipped, not counted as neutral 1.0),
+  `displayScoreFor`, `toDisplayScore` (now just a 0–100 clamp). Keep the "算法说明 / Algorithm"
+  modal in `index.html` in sync. Every score emits a `conditions_snapshot` (frozen weather/
+  tide/moon/season + `engineVersion` = "1.5") — catch reports persist it for later calibration.
+  **Don't break the snapshot shape.**
+- **Live data + instant conditions.** Weather/marine/tide come from Open-Meteo, fetched per
+  ~22 km coastal zone (not one map-center call), cached 10 min; times in Sydney tz. The center
+  pill and every spot detail **seed instantly from the nearest preloaded zone**
+  (`conditionsForSpot` / `nearestRegionConditions`), then a per-spot fetch refines them
+  (race-guarded) — no "loading…" wait, and the pill tracks the search pin on drag.
+- **Spot search.** `#spotSearch` filters by name (zh / en / `area` suburb) and **bypasses the
+  radius gate** so a match always surfaces even if far from the map center; `×` clears it.
 - **Backend client.** `api.js` reads `window.SF_CONFIG.apiBase` (set it before
   `api.js` loads). Default base: `http://localhost:3000` when served on port
   5500/5501 (static preview), else same-origin. All calls use
@@ -126,15 +148,30 @@ server/
   decides URL shape — switching drivers needs no schema/caller change.
 - **Schema** (`db/schema.sql`, idempotent): `users`, `sessions`, `catch_reports`
   (with `conditions_snapshot jsonb`), `reviews`, `media`, `forum_categories/threads/
-  posts`, `reactions`, `forum_reports`, `notifications`, `email_verifications`.
+  posts`, `reactions`, `forum_reports`, `notifications`, `email_verifications`,
+  `fishing_intel` + `ingest_runs` (intel harness), `competitions` (dormant — feature unwired).
   `spot_id` is the **text id from `spots.js`** (e.g. `bare-island`) — the 205-spot
-  dataset is intentionally NOT migrated into the DB.
+  dataset is intentionally NOT migrated into the DB. `forum_categories` is seeded with topic
+  boards **plus 6 `r-*` regional boards** (Sydney Harbour / Northern Beaches / South / Central
+  Coast / Wollongong / Hawkesbury).
 - **Moderation:** any signed-in user can report a catch (`POST /api/catches/:id/report`) or a
   forum thread/post; reports land in the generic `forum_reports` table. `requireAdmin` (role
   `admin`/`moderator`) gates `/api/admin/*` — list open reports + take down (soft-delete)
   catches/threads/posts, which also soft-deletes attached media. Bootstrap the first admin with
   SQL (`UPDATE users SET role='admin' WHERE email=…`); see `DEPLOY-budget.md` §4. Takedowns are
   soft-deletes (audit/legal-hold) — never hard-delete reported content.
+- **Fishing-intel ingest harness** (`src/ingest/`): a backend cron (`scheduler.js` — runs on a
+  timer, `INGEST_INTERVAL_HOURS`, + an optional boot run in prod) upserts curated **official-source
+  + community-link** items into `fishing_intel`, served read-only at `/api/intel` (surfaced in the
+  insights "钓鱼动态" feed + per-species on scene pages). Idempotent via `dedup_hash`. AI
+  summarisation (`summarize.js`, Anthropic Messages API, no SDK) is **OPTIONAL — gated on
+  `ANTHROPIC_API_KEY`** (no key = link items only, zero LLM cost). Admin trigger:
+  `POST /api/intel/run`. Env documented in `.env.example` (`INGEST_*`, `ANTHROPIC_*`); the prod
+  compose passes `ANTHROPIC_API_KEY` through.
+- **Competitions = dormant.** `competitions.routes.js` + the `competitions` table exist (online-only
+  leaderboard derived from public catches) but were **removed from the UX** by product decision —
+  the route is unregistered and the frontend unwired. Kept for easy revival; don't re-enable without
+  confirming against `SCOPE.md` (online-only — never in-person).
 - API surface: see `server/README.md`.
 
 ## Running locally
