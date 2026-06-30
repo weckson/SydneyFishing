@@ -11,7 +11,9 @@
     "dev": "node --watch src/server.js",
     "dev:mem": "node _devserver.mjs",
     "start": "node src/server.js",
-    "migrate": "node src/migrate.js"
+    "migrate": "node src/migrate.js",
+    "ingest": "node src/ingest/cli.mjs",
+    "ingest:preview": "node src/ingest/preview.mjs"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1073.0",

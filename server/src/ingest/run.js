@@ -18,7 +18,7 @@ export async function runIngest({ logger } = {}) {
   const log = (m) => { try { (logger ? logger.info.bind(logger) : console.log)("[ingest] " + m); } catch (e) {} };
   const runRes = await query(`INSERT INTO ingest_runs (started_at) VALUES (now()) RETURNING id`);
   const runId = runRes.rows[0].id;
-  let processed = 0;
+  let processed = 0, summarized = 0;
   try {
     const sources = allSources();
     const useLLM = !!config.anthropicApiKey;
@@ -43,12 +43,13 @@ export async function runIngest({ logger } = {}) {
       if (summary || summaryCn) {
         await query(`UPDATE fishing_intel SET summary = $2, summary_cn = $3, fetched_at = now() WHERE dedup_hash = $1`,
           [dedup, summary, summaryCn]);
+        summarized++;
       }
       processed++;
     }
     await query(`UPDATE ingest_runs SET finished_at = now(), ok = true, items_added = $2 WHERE id = $1`, [runId, processed]);
-    log(`done: ${processed} items`);
-    return { ok: true, processed };
+    log(`done: ${processed} items, ${summarized} AI-summarised`);
+    return { ok: true, processed, summarized };
   } catch (e) {
     await query(`UPDATE ingest_runs SET finished_at = now(), ok = false, note = $2 WHERE id = $1`,
       [runId, String(e.message || e).slice(0, 300)]).catch(() => {});
