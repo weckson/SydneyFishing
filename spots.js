@@ -1156,7 +1156,7 @@ window.SYDNEY_SPOTS = [
   },
   {
     id: "potter-point", name: "Potter Point", nameCn: "波特角",
-    lat: -34.0550, lng: 151.2030, type: "rock", baseScore: 84,
+    lat: -34.0351, lng: 151.2121, type: "rock", baseScore: 84,
     species: ["Tailor", "Salmon", "Kingfish", "Bonito", "Drummer"],
     best: "Dawn metals; run-in tide.", bestCn: "清晨铁板涨潮最佳。",
     techniques: ["Metal slugs", "Live bait"],
