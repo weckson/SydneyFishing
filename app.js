@@ -1248,6 +1248,8 @@ function showDetail(id) {
         <div class="spot-conditions" id="spotConditions">${renderSpotConditionsHTML(seedCond)}</div>
       </section>
 
+      ${renderCamsSection(s)}
+
       <section>
         <h4>最佳时段 · Best Time</h4>
         <p>${s.bestCn}</p>
@@ -1946,6 +1948,27 @@ async function importLocalReviews(spotId) {
     alert(`已导入 ${r.imported} 条，跳过 ${r.skipped} 条重复 · Imported ${r.imported}, skipped ${r.skipped}`);
     showDetail(spotId); // re-render to drop the import button + reload list
   } catch (e) { alert(e.message || "导入失败"); }
+}
+
+// Live wave/surf monitoring links for a spot's region (CSP-safe outbound links — no iframes).
+// 让用户出发前直接"看到浪"：官方实时浪高浮标 + 海滩冲浪摄像头。
+function renderCamsSection(spot) {
+  if (!window.camsForRegion || !window.spotRegionId) return "";
+  const cams = window.camsForRegion(window.spotRegionId(spot));
+  if (!cams.length) return "";
+  const ico = (k) => k === "data" ? "📈" : k === "cam" ? "📹" : "🌐";
+  const rows = cams.map(c =>
+    `<a class="cam-link" href="${escapeAttr(safeUrl(c.url))}" target="_blank" rel="noopener noreferrer">
+      <span class="cam-ico">${ico(c.kind)}</span>
+      <span class="cam-name">${escapeHtml(c.nameCn)} <span class="en">${escapeHtml(c.name)}</span></span>
+      <span class="cam-src">${escapeHtml(c.source)} ↗</span>
+    </a>`).join("");
+  return `
+    <section>
+      <h4>📹 实时浪况 · Live Cams &amp; Wave Data</h4>
+      <div class="cam-list">${rows}</div>
+      <div class="reg-disclaimer">外部链接，新窗口打开 · External links open in a new tab</div>
+    </section>`;
 }
 
 // ---------- Catch reports ----------

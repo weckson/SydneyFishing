@@ -1914,6 +1914,17 @@ main {
 .ins-intel-kind.k-regulation, .ins-intel-kind.k-closure { background: #fdebef; color: var(--coral); }
 .ins-intel-kind.k-safety { background: #fff6e6; color: var(--gold-dark); }
 .ins-intel-kind.k-report { background: #e6f7f3; color: var(--green); }
+.ins-intel-kind.k-tutorial { background: #e7f0ff; color: #2b6cb0; }
+.ins-intel-kind.k-news { background: var(--bg); color: var(--ink-2); }
 .ins-intel-sum { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; line-height: 1.5; }
 .ins-intel-src { font-size: 12px; margin-top: 5px; }
 .ins-intel-src a { color: var(--aqua-2); }
+
+/* live cams / wave monitoring */
+.cam-list { display: flex; flex-direction: column; gap: 6px; }
+.cam-link { display: flex; align-items: center; gap: 10px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius-xs); padding: 8px 11px; text-decoration: none; color: var(--ink); }
+.cam-link:hover { border-color: var(--aqua); }
+.cam-ico { font-size: 16px; flex-shrink: 0; }
+.cam-name { flex: 1; font-size: 13px; }
+.cam-name .en { color: var(--muted); font-size: 11.5px; }
+.cam-src { font-size: 11.5px; color: var(--aqua-2); white-space: nowrap; }

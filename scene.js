@@ -76,6 +76,8 @@
           <div class="spot-conditions" id="sceneConditions"><div class="spot-conditions-loading">海况加载中… Loading…</div></div>
         </section>
 
+        ${window.renderCamsSection ? window.renderCamsSection(spot) : ""}
+
         <section>
           <h4>最佳时段/潮汐 · Best Time &amp; Tide</h4>
           <p>${esc(spot.bestCn)}</p>
@@ -153,7 +155,8 @@
         const href = it.source_url && window.safeUrl ? window.safeUrl(it.source_url) : "";
         const link = href ? `<a href="${escA(href)}" target="_blank" rel="noopener noreferrer">${esc(it.source_name || "来源")} ↗</a>` : esc(it.source_name || "");
         const sum = (it.summary_cn || it.summary) ? `<div class="ins-intel-sum">${esc(it.summary_cn || it.summary)}</div>` : "";
-        return `<div class="ins-intel-item"><div class="ins-intel-top"><b>${esc(it.title_cn || it.title || "")}</b></div>${sum}<div class="ins-intel-src">${link}</div></div>`;
+        const kindLabel = ({ regulation: "法规", closure: "禁渔", safety: "安全", report: "鱼情", news: "新闻", tutorial: "教程" })[it.kind] || it.kind;
+        return `<div class="ins-intel-item"><div class="ins-intel-top"><span class="ins-intel-kind k-${esc(it.kind)}">${esc(kindLabel)}</span> <b>${esc(it.title_cn || it.title || "")}</b></div>${sum}<div class="ins-intel-src">${link}</div></div>`;
       }).join("") : `<div class="no-reviews">暂无动态</div>`;
     } catch (e) { el.innerHTML = ""; }
   }
