@@ -250,19 +250,20 @@ function initMap() {
     mapCenterLatLng = [c.lat, c.lng];
     drawRadiusCircle(); // refresh in case zoom changed
     if (mapMoveTimer) clearTimeout(mapMoveTimer);
-    mapMoveTimer = setTimeout(async () => {
-      // Instant: reflect the nearest preloaded zone's conditions at the new center (no network),
-      // so the weather pill updates as the pin moves across Sydney instead of feeling stuck.
+    mapMoveTimer = setTimeout(() => {
+      // Instant: use the nearest preloaded zone's conditions (no network) so the pill + list
+      // update the moment the search center moves.
       const near = nearestRegionConditions(mapCenterLatLng);
       if (near) { currentWeather = near; conditionsCenterLatLng = mapCenterLatLng; showWeather(); }
-      // Only hit the network when we have no cached conditions near the new center, or drifted far.
-      if (!near || shouldRefetchConditions()) {
-        await loadConditionsAt(mapCenterLatLng);
-      }
-      ensureRegionalFresh(); // refresh all zones in the background if the cache is stale (>10 min)
+      // Render NOW — never block the re-rank/redraw on a network fetch.
       render();
       updateReferenceIndicator();
-    }, 350);
+      // Background refine: exact-center weather + stale-zone refresh, without blocking the UI.
+      if (!near || shouldRefetchConditions()) {
+        loadConditionsAt(mapCenterLatLng).then(() => showWeather()).catch(() => {});
+      }
+      ensureRegionalFresh();
+    }, 150);
   });
 }
 
