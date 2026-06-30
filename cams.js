@@ -22,11 +22,11 @@
       url: "https://www.coastalwatch.com/surf-forecasts/nsw/sydney" },
 
     // Per-beach live surf cams (Swellnet). region tags match spotRegionId() buckets.
-    { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Manly 曼利", name: "Manly", url: "https://www.swellnet.com/surfcams/manly" },
-    { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Narrabeen 纳拉滨", name: "Narrabeen", url: "https://www.swellnet.com/surfcams/narrabeen" },
-    { region: "harbour", kind: "cam", source: "Swellnet", nameCn: "Bondi 邦迪", name: "Bondi", url: "https://www.swellnet.com/surfcams/bondi" },
-    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Maroubra 马鲁布拉", name: "Maroubra", url: "https://www.swellnet.com/surfcams/maroubra" },
-    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Cronulla 克罗努拉", name: "Cronulla", url: "https://www.swellnet.com/surfcams/cronulla" },
+    { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Manly 曼利", name: "Manly", lat: -33.7969, lng: 151.2876, url: "https://www.swellnet.com/surfcams/manly" },
+    { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Narrabeen 纳拉滨", name: "Narrabeen", lat: -33.7126, lng: 151.2986, url: "https://www.swellnet.com/surfcams/narrabeen" },
+    { region: "harbour", kind: "cam", source: "Swellnet", nameCn: "Bondi 邦迪", name: "Bondi", lat: -33.8915, lng: 151.2767, url: "https://www.swellnet.com/surfcams/bondi" },
+    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Maroubra 马鲁布拉", name: "Maroubra", lat: -33.9497, lng: 151.2575, url: "https://www.swellnet.com/surfcams/maroubra" },
+    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Cronulla 克罗努拉", name: "Cronulla", lat: -34.0577, lng: 151.1518, url: "https://www.swellnet.com/surfcams/cronulla" },
     // Wollongong region gets its own official buoy (Port Kembla).
     { region: "wollongong", kind: "data", source: "MHL NSW", nameCn: "Port Kembla 实时浪高", name: "Port Kembla wave buoy — live Hs", url: "https://mhl.nsw.gov.au/Station-PORKEM" }
   ];
@@ -34,5 +34,14 @@
   // Cams relevant to a region: the always-on official/index links + any beach cams in that region.
   window.camsForRegion = function (regionId) {
     return (window.SF_CAMS || []).filter(c => c.region === "all" || c.region === regionId);
+  };
+
+  // Does this spot have a beach surf-cam within maxKm? (powers the "有摄像头" filter)
+  window.spotHasCam = function (spot, maxKm) {
+    maxKm = maxKm || 6;
+    if (!spot || typeof window.haversineKm !== "function") return false;
+    return (window.SF_CAMS || []).some(c =>
+      c.kind === "cam" && c.lat != null &&
+      window.haversineKm([spot.lat, spot.lng], [c.lat, c.lng]) <= maxKm);
   };
 })();

@@ -1935,6 +1935,8 @@ main {
 .shops-ctl button.active { background: #7c3aed; color: #fff; }
 .shops-ctl button.active .ic { color: #fff; }
 .shops-ctl button + button { border-top: 1px solid var(--line); }
+.cam-filter { display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; color: var(--ink-2); cursor: pointer; }
+.cam-filter input { accent-color: var(--aqua-2); }
 
 /* conditions refresh + nearest tackle shops (in spot detail) */
 .cond-refresh { background: none; border: 1px solid var(--line-2); border-radius: 999px; padding: 1px 8px; font-size: 11px; color: var(--aqua-2); cursor: pointer; margin-left: 4px; }

@@ -14,7 +14,7 @@
   default-src 'self';
   script-src 'self' https://unpkg.com;
   style-src 'self' 'unsafe-inline' https://unpkg.com;
-  img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://wms.gebco.net http://localhost:3000 http://127.0.0.1:3000;
+  img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://services.arcgisonline.com https://tiles.openseamap.org http://localhost:3000 http://127.0.0.1:3000;
   connect-src 'self' https://api.open-meteo.com https://marine-api.open-meteo.com http://localhost:3000 http://127.0.0.1:3000;
   font-src 'self';
   object-src 'none';
@@ -252,6 +252,7 @@
             <option value="Groper">隆头鱼 Groper</option>
           </select>
         </label>
+        <label class="cam-filter"><input type="checkbox" id="camFilter" /> 📹 有摄像头 Has cam</label>
       </div>
     </div>
     <div class="spot-search-wrap">

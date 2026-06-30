@@ -363,10 +363,19 @@ function toggleDepth() {
   depthVisible = !depthVisible;
   if (depthVisible) {
     if (!depthLayer) {
-      depthLayer = L.tileLayer.wms("https://wms.gebco.net/mapserv", {
-        layers: "GEBCO_LATEST", format: "image/png", transparent: true,
-        opacity: 0.55, attribution: "GEBCO bathymetry"
+      // updateWhenIdle:false → load tiles DURING the pan (not only when idle); keepBuffer keeps the
+      // surrounding ring loaded — fixes "只加载当前视野、拖动时旁边不出来". maxNativeZoom upscales
+      // past the source's native zoom instead of going blank.
+      const tileOpts = { updateWhenIdle: false, updateWhenZooming: false, keepBuffer: 6, maxZoom: 20 };
+      // Esri World Ocean Base — proper bathymetric depth shading + undersea contours (nearshore).
+      const oceanBase = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
+        opacity: 0.85, maxNativeZoom: 16, attribution: "Esri · GEBCO · NOAA", ...tileOpts
       });
+      // OpenSeaMap seamark — nautical chart: depth soundings/contours + marks near shore.
+      const seamark = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
+        maxNativeZoom: 18, attribution: "OpenSeaMap", ...tileOpts
+      });
+      depthLayer = L.layerGroup([oceanBase, seamark]);
     }
     depthLayer.addTo(map);
   } else if (depthLayer) {
@@ -1177,6 +1186,10 @@ function render() {
       const a = getAccess(s.id);
       return a && a.score >= accessFilter;
     });
+  }
+  // "有摄像头" filter: only spots with a nearby beach surf-cam.
+  if (document.getElementById("camFilter")?.checked && typeof window.spotHasCam === "function") {
+    spots = spots.filter(s => window.spotHasCam(s));
   }
   // Mode-based terrain filter (family mode hides hard/extreme)
   spots = spots.filter(s => !isSpotFiltered(s, currentMode));
@@ -2441,6 +2454,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("speciesSel").addEventListener("change", render);
   document.getElementById("accessSel").addEventListener("change", render);
+  document.getElementById("camFilter")?.addEventListener("change", render);
   // Spot name search — live filter as you type; the × button clears it.
   const spotSearchEl = document.getElementById("spotSearch");
   const spotSearchClear = document.getElementById("spotSearchClear");
