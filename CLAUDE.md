@@ -47,6 +47,7 @@ seasons.js              window.SPECIES_SEASONS + SEASON_SPECIES_WEIGHTS
 regulations.js          window.NSW_REGULATIONS + NSW_REGULATIONS_META + SAFETY_CONTENT (NSW size/bag/safety)
 regions.js              window.SF_REGIONS + spotRegionId() — client-side spot→region buckets
 cams.js                 window.SF_CAMS + camsForRegion() — live wave/surf monitoring links
+shops.js                window.SF_SHOPS — local tackle shops (toggleable map layer)
 reviews.js              window.SEED_REVIEWS — external discussion links
 app.js                  CORE: Leaflet map + scoring engine v1.5 + spot search + spot detail
 api.js                  window.SF_API — backend HTTP client (degrades gracefully)
@@ -193,6 +194,8 @@ npm run dev:mem             # Option A: in-memory pg-mem, zero setup, resets on 
 cp .env.example .env        # edit COOKIE_SECRET
 docker compose up -d        # Postgres on :5432
 npm run migrate             # apply schema (idempotent)
+npm run ingest:preview      # dry-run the intel AI summariser (validates ANTHROPIC_API_KEY; no DB)
+npm run ingest              # one-shot intel ingest vs DATABASE_URL (manual refresh / cron)
 npm run dev                 # http://localhost:3000  (node --watch)
 ```
 Smoke test: `curl localhost:3000/healthz` and `/readyz` (`db:up`). More in `server/README.md`.
