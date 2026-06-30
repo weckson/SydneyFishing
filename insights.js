@@ -82,7 +82,36 @@
       el.innerHTML = (d.items && d.items.length) ? d.items.map(intelItem).join("") : `<div class="ins-empty">${emptyMsg}</div>`;
     } catch (e) { el.innerHTML = `<div class="ins-empty">加载失败</div>`; }
   }
-  const loadBeginner = () => loadInto("insBeginner", { kind: "tutorial", scopeKey: "beginner", limit: 10 }, "教程整理中");
+  // 新手必看 — a CURATED static list so it always shows (works with NO backend). When the
+  // backend/ingest is available, any DB tutorials not already listed are appended.
+  const encq = (s) => encodeURIComponent(s);
+  const BEGINNER_TUTORIALS = [
+    { kind: "tutorial", source_name: "YouTube", title_cn: "悉尼岸钓新手视频", title: "Land-based fishing Sydney — for beginners", source_url: "https://www.youtube.com/results?search_query=" + encq("land based fishing Sydney for beginners") },
+    { kind: "tutorial", source_name: "YouTube · Roger Osborne", title_cn: "Roger Osborne · 悉尼海滩钓鱼教练", title: "Roger Osborne — Sydney beach-fishing coach", source_url: "https://www.youtube.com/@RogerOsborneFishing" },
+    { kind: "tutorial", source_name: "Roger's Fishing", title_cn: "海滩钓鱼新手课程（Roger Osborne）", title: "Beach fishing beginner course", source_url: "https://www.rogersfishing.com/beach-fishing-masterclass" },
+    { kind: "tutorial", source_name: "YouTube", title_cn: "新手必学钓鱼绳结", title: "Beginner fishing knots", source_url: "https://www.youtube.com/results?search_query=" + encq("fishing knots for beginners") },
+    { kind: "tutorial", source_name: "哔哩哔哩 bilibili", title_cn: "马成 · Daiwa 签约钓手 路亚教学", title: "Ma Cheng (Daiwa pro) — lure tutorials", source_url: "https://search.bilibili.com/all?keyword=" + encq("马成 路亚 教学") },
+    { kind: "tutorial", source_name: "抖音 Douyin", title_cn: "马成 路亚视频（抖音 · 50万+ 粉）", title: "Ma Cheng — lure videos (Douyin)", source_url: "https://www.douyin.com/search/" + encq("马成 路亚") },
+    { kind: "tutorial", source_name: "小红书 RED", title_cn: "马成 路亚笔记", title: "Ma Cheng — lure notes (RED)", source_url: "https://www.xiaohongshu.com/search_result?keyword=" + encq("马成 路亚") },
+    { kind: "tutorial", source_name: "哔哩哔哩 bilibili", title_cn: "悉尼钓鱼新手教程（中文）", title: "Sydney fishing tutorials (Chinese)", source_url: "https://search.bilibili.com/all?keyword=" + encq("悉尼 钓鱼 新手 教程") },
+    { kind: "tutorial", source_name: "哔哩哔哩 bilibili", title_cn: "路亚入门合集", title: "Lure fishing basics", source_url: "https://search.bilibili.com/all?keyword=" + encq("路亚 入门 合集") },
+    { kind: "tutorial", source_name: "哔哩哔哩 bilibili", title_cn: "海钓/矶钓教学合集", title: "Rock/sea fishing how-to", source_url: "https://search.bilibili.com/all?keyword=" + encq("海钓 矶钓 教学 合集") },
+    { kind: "tutorial", source_name: "小红书 RED", title_cn: "新手装备/钓组合集", title: "Beginner gear & rigs (RED)", source_url: "https://www.xiaohongshu.com/search_result?keyword=" + encq("钓鱼 新手 装备 钓组") },
+    { kind: "tutorial", source_name: "Daiwa", title_cn: "Daiwa 签约钓手 路亚教学", title: "Daiwa pro-angler lure tutorials", source_url: "https://search.bilibili.com/all?keyword=" + encq("daiwa 签约钓手 路亚 教学") }
+  ];
+  function loadBeginner() {
+    const el = document.getElementById("insBeginner");
+    if (!el) return;
+    el.innerHTML = BEGINNER_TUTORIALS.map(intelItem).join("");   // always visible
+    if (window.SF_API && window.SF_API.available) {
+      window.SF_API.getIntel({ kind: "tutorial", scopeKey: "beginner", limit: 10 }).then(d => {
+        if (!d || !d.items || !d.items.length) return;
+        const seen = new Set(BEGINNER_TUTORIALS.map(t => t.source_url));
+        const extra = d.items.filter(it => it.source_url && !seen.has(it.source_url));
+        if (extra.length) el.insertAdjacentHTML("beforeend", extra.map(intelItem).join(""));
+      }).catch(() => {});
+    }
+  }
   const loadIntel = () => loadInto("insIntel", { limit: 12 }, "暂无动态，更新引擎稍后会抓取");
 
   async function render() {

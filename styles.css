@@ -1324,10 +1324,13 @@ main {
   background: rgba(1, 30, 60, .65);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
   display: flex; align-items: center; justify-content: center;
-  z-index: 1000; padding: 20px;
+  z-index: 2000; padding: 20px;
   animation: fadeIn .2s ease;
 }
 .detail.hidden { display: none; }
+/* Cam / safety popups open FROM the spot detail (2000) or from a full-screen view (1500),
+   so they must sit above both. */
+#camModal, #safetyModal { z-index: 2050; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
 
@@ -1461,10 +1464,14 @@ main {
 .auth-btn.authed { color: var(--gold); border-color: var(--gold); }
 
 .auth-modal {
-  /* Must sit ABOVE the full-screen overlays (.forum-view 1500, .forum-modal 1600 — also
-     reused by scene/glossary/kits) so the login prompt is visible when triggered from them
-     (e.g. tapping 发帖/登录后回复 while logged out). Below the 9999 toast. */
-  position: fixed; inset: 0; z-index: 2000;
+  /* Stacking order (all must clear the full-screen overlays — .forum-view 1500 / .forum-modal
+     1600 — reused by scene/glossary/kits, so popups triggered from inside them stay visible):
+       .detail (spot detail / algo)        2000
+       #camModal / #safetyModal            2050  (open from the detail)
+       .auth-modal (login / report)        2100  (top — can be triggered from any card/modal)
+       toast                               9999
+     Before this, login/report/cam popups opened BEHIND the views — looked like nothing happened. */
+  position: fixed; inset: 0; z-index: 2100;
   background: rgba(3, 20, 40, .55); backdrop-filter: blur(3px);
   display: flex; align-items: center; justify-content: center; padding: 20px;
 }

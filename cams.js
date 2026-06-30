@@ -18,10 +18,15 @@
       url: "https://webcamsydney.com/", embed: null },
     // Windy cams are embeddable INLINE (Windy provides the public embed player). Others link out.
     { region: "harbour", kind: "cam", source: "Windy", nameCn: "Bondi 邦迪", name: "Bondi (North Bondi)", lat: -33.8915, lng: 151.2767, url: "https://www.windy.com/webcams/1721795690", embed: "https://webcams.windy.com/webcams/public/embed/player/1721795690/live" },
+    { region: "harbour", kind: "cam", source: "Windy", nameCn: "Bondi 邦迪海滩", name: "Bondi Beach", lat: -33.8911, lng: 151.2760, url: "https://www.windy.com/webcams/1168708590", embed: "https://webcams.windy.com/webcams/public/embed/player/1168708590/live" },
+    { region: "harbour", kind: "cam", source: "Windy", nameCn: "达令港 Darling Harbour", name: "Darling Harbour", lat: -33.8745, lng: 151.2010, url: "https://www.windy.com/webcams/1346242931", embed: "https://webcams.windy.com/webcams/public/embed/player/1346242931/live" },
+    { region: "harbour", kind: "cam", source: "Windy", nameCn: "环形码头 Circular Quay", name: "Circular Quay", lat: -33.8610, lng: 151.2110, url: "https://www.windy.com/webcams/1503353468", embed: "https://webcams.windy.com/webcams/public/embed/player/1503353468/live" },
     { region: "northern-beaches", kind: "cam", source: "Windy", nameCn: "Manly 曼利", name: "Manly", lat: -33.7969, lng: 151.2876, url: "https://www.windy.com/webcams/1234365712", embed: "https://webcams.windy.com/webcams/public/embed/player/1234365712/live" },
+    { region: "northern-beaches", kind: "cam", source: "Windy", nameCn: "Dee Why 迪威", name: "Dee Why", lat: -33.7515, lng: 151.2985, url: "https://www.windy.com/webcams/1234365705", embed: "https://webcams.windy.com/webcams/public/embed/player/1234365705/live" },
     { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Narrabeen 纳拉滨", name: "Narrabeen", lat: -33.7126, lng: 151.2986, url: "https://www.swellnet.com/surfcams/narrabeen", embed: null },
     { region: "south", kind: "cam", source: "Windy", nameCn: "Maroubra 马鲁布拉", name: "Maroubra", lat: -33.9497, lng: 151.2575, url: "https://www.windy.com/webcams/1580184425", embed: "https://webcams.windy.com/webcams/public/embed/player/1580184425/live" },
-    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Cronulla 克罗努拉", name: "Cronulla", lat: -34.0577, lng: 151.1518, url: "https://www.swellnet.com/surfcams/cronulla", embed: null },
+    { region: "south", kind: "cam", source: "Windy", nameCn: "Cronulla 克罗努拉", name: "Cronulla", lat: -34.0577, lng: 151.1518, url: "https://www.windy.com/webcams/1483414399", embed: "https://webcams.windy.com/webcams/public/embed/player/1483414399/live" },
+    { region: "south", kind: "cam", source: "Windy", nameCn: "Wanda 万达海滩", name: "Wanda Beach (Cronulla)", lat: -34.0430, lng: 151.1630, url: "https://www.windy.com/webcams/1234365766", embed: "https://webcams.windy.com/webcams/public/embed/player/1234365766/live" },
     // Wollongong region gets its own official buoy (Port Kembla).
     { region: "wollongong", kind: "data", source: "MHL NSW", nameCn: "Port Kembla 实时浪高", name: "Port Kembla wave buoy — live Hs", url: "https://mhl.nsw.gov.au/Station-PORKEM" }
   ];
