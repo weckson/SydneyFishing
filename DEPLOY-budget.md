@@ -37,6 +37,31 @@ sudo fallocate -l 2G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapf
 echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
 ```
 
+### CentOS / Rocky / Alma / CentOS Stream variant
+
+Lightsail has **no CentOS blueprint**, so this applies when the box runs on another host (EC2,
+Vultr, Aliyun, …). **Keep it in Australia (`ap-southeast-2` / Sydney) for data residency.** Replace
+the `apt-get` block above with:
+
+```bash
+# Docker CE + compose plugin — official script covers CentOS 7 / Stream 8·9 / Rocky / Alma
+curl -fsSL https://get.docker.com | sudo sh
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER && newgrp docker
+sudo yum install -y git            # on 8+/Rocky/Alma: sudo dnf install -y git
+docker compose version             # confirm compose v2 (NOT the legacy docker-compose)
+
+# swap: identical fallocate/mkswap/swapon as above
+
+# firewalld (CentOS runs it by default; there is no Lightsail cloud firewall here):
+sudo firewall-cmd --permanent --add-service=http --add-service=https --add-service=ssh
+sudo firewall-cmd --reload         # ALSO open 80/443/22 in your host's security group
+```
+
+**SELinux: no action needed.** The compose stack uses named volumes (`pgdata` / `uploads` /
+`caddy_data` / `caddy_config`), which Docker labels automatically even in enforcing mode — only
+bind mounts would need a `:Z` flag.
+
 ## 1. DNS（GoDaddy）
 
 在 GoDaddy → **My Products → DNS**(域名 `sydneyfishing.au`):
