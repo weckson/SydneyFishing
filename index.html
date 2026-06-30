@@ -17,6 +17,7 @@
   img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://services.arcgisonline.com https://tiles.openseamap.org http://localhost:3000 http://127.0.0.1:3000;
   connect-src 'self' https://api.open-meteo.com https://marine-api.open-meteo.com http://localhost:3000 http://127.0.0.1:3000;
   font-src 'self';
+  frame-src https://www.youtube-nocookie.com https://www.youtube.com;
   object-src 'none';
   base-uri 'self';
   frame-ancestors 'none';
@@ -363,6 +364,11 @@
 <!-- Rock-fishing safety tutorial modal (filled by openSafetyTutorial) -->
 <div id="safetyModal" class="detail hidden">
   <div class="detail-card" id="safetyModalContent"></div>
+</div>
+
+<!-- Live-cam modal (filled by openLiveCam) -->
+<div id="camModal" class="detail hidden">
+  <div class="detail-card" id="camModalContent"></div>
 </div>
 
 <!-- Algorithm explanation modal -->

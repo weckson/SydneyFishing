@@ -1928,6 +1928,12 @@ main {
 .cam-name { flex: 1; font-size: 13px; }
 .cam-name .en { color: var(--muted); font-size: 11.5px; }
 .cam-src { font-size: 11.5px; color: var(--aqua-2); white-space: nowrap; }
+.livecam-btn { display: block; width: 100%; box-sizing: border-box; background: var(--coral); color: #fff; border: none; border-radius: var(--radius-sm); padding: 10px; font-size: 14px; font-weight: 700; cursor: pointer; margin-bottom: 8px; }
+.livecam-btn:hover { filter: brightness(1.06); }
+.cam-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: var(--radius-sm); overflow: hidden; margin-bottom: 10px; }
+.cam-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.cam-noembed { font-size: 13px; color: var(--ink-2); line-height: 1.6; padding: 14px; background: var(--bg); border-radius: var(--radius-sm); margin-bottom: 10px; }
+.cam-noembed .en { color: var(--muted); }
 
 /* tackle-shop map toggle (Leaflet control) */
 .shops-ctl button { display: flex; align-items: center; gap: 5px; padding: 6px 9px; background: var(--card); border: none; cursor: pointer; font: inherit; font-size: 12.5px; color: var(--ink); border-radius: 4px; }

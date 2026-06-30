@@ -373,15 +373,16 @@ function toggleDepth() {
       // surrounding ring loaded — fixes "只加载当前视野、拖动时旁边不出来". maxNativeZoom upscales
       // past the source's native zoom instead of going blank.
       const tileOpts = { updateWhenIdle: false, updateWhenZooming: false, keepBuffer: 6, maxZoom: 20 };
-      // Esri World Ocean Base — proper bathymetric depth shading + undersea contours (nearshore).
-      const oceanBase = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/Ocean/World_Ocean_Base/MapServer/tile/{z}/{y}/{x}", {
-        opacity: 0.85, maxNativeZoom: 16, attribution: "Esri · GEBCO · NOAA", ...tileOpts
+      // Esri World Imagery — Google-style satellite (terrain + nearshore reefs/sandbars/shallows
+      // are visible in the imagery). Opaque, so it replaces the base while the toggle is on.
+      const sat = L.tileLayer("https://services.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}", {
+        maxNativeZoom: 19, attribution: "Esri World Imagery", ...tileOpts
       });
-      // OpenSeaMap seamark — nautical chart: depth soundings/contours + marks near shore.
+      // OpenSeaMap seamark — nautical depth soundings/contours + marks layered on top of the imagery.
       const seamark = L.tileLayer("https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png", {
         maxNativeZoom: 18, attribution: "OpenSeaMap", ...tileOpts
       });
-      depthLayer = L.layerGroup([oceanBase, seamark]);
+      depthLayer = L.layerGroup([sat, seamark]);
     }
     depthLayer.addTo(map);
   } else if (depthLayer) {
@@ -399,7 +400,7 @@ function addLayerControls() {
     const d = L.DomUtil.create("div", "leaflet-bar shops-ctl");
     d.innerHTML =
       `<button id="shopsToggle" type="button" title="显示/隐藏渔具店 · Tackle shops">${svgIcon("anchor")}<span>渔具店</span></button>` +
-      `<button id="depthToggle" type="button" title="显示/隐藏大致水深 · Water depth">${svgIcon("wave")}<span>水深</span></button>`;
+      `<button id="depthToggle" type="button" title="卫星图 + 水深等深线 · Satellite + depth">${svgIcon("wave")}<span>卫星/水深</span></button>`;
     L.DomEvent.disableClickPropagation(d);
     d.querySelector("#shopsToggle").addEventListener("click", toggleShops);
     d.querySelector("#depthToggle").addEventListener("click", toggleDepth);
@@ -1403,6 +1404,8 @@ function showDetail(id) {
   bindRigTabs(s);
   // bind rock-fishing safety tutorial button (verdict banner)
   bindSafetyVerdict();
+  // bind live-cam popup button (cams section)
+  bindLiveCam(s);
   // species chips → spot×species scene page (#/scene/:spotId/:species)
   const chipsEl = el.querySelector(".detail-chips");
   if (chipsEl) chipsEl.addEventListener("click", (e) => {
@@ -2068,12 +2071,55 @@ function renderCamsSection(spot) {
       <span class="cam-name">${escapeHtml(c.nameCn)} <span class="en">${escapeHtml(c.name)}</span></span>
       <span class="cam-src">${escapeHtml(c.source)} ↗</span>
     </a>`).join("");
+  const live = window.liveCamForSpot ? window.liveCamForSpot(spot) : null;
+  const liveBtn = live
+    ? `<button type="button" class="livecam-btn" id="liveCamBtn">▶ 看实时直播 · ${escapeHtml(live.nameCn)} Live${live.embed ? "" : " ↗"}</button>`
+    : "";
   return `
     <section>
       <h4>📹 实时浪况 · Live Cams &amp; Wave Data</h4>
+      ${liveBtn}
       <div class="cam-list">${rows}</div>
       <div class="reg-disclaimer">外部链接，新窗口打开 · External links open in a new tab</div>
     </section>`;
+}
+
+// Bind the ▶ 实时直播 button (called after the cams section renders, in detail + scene).
+function bindLiveCam(spot) {
+  const b = document.getElementById("liveCamBtn");
+  if (b && window.liveCamForSpot) b.addEventListener("click", () => openLiveCam(window.liveCamForSpot(spot)));
+}
+
+// Live-cam popup: embeds the stream (YouTube) when embeddable, else a big launch link.
+function openLiveCam(cam) {
+  const modal = document.getElementById("camModal");
+  const content = document.getElementById("camModalContent");
+  if (!cam || !modal || !content) return;
+  const page = safeUrl(cam.url);
+  const frame = cam.embed
+    ? `<div class="cam-frame"><iframe src="${escapeAttr(cam.embed)}" allow="autoplay; encrypted-media; fullscreen" allowfullscreen referrerpolicy="no-referrer" title="${escapeAttr(cam.nameCn)}"></iframe></div>`
+    : `<div class="cam-noembed">此摄像头不支持站内播放（供应商限制），请点下方按钮在新窗口观看实时直播。<br><span class="en">This surf-cam blocks in-app embedding — open it in a new tab.</span></div>`;
+  content.innerHTML = `
+    <div class="detail-hero">
+      <button class="close" id="camClose">×</button>
+      <h2>📹 ${escapeHtml(cam.nameCn)} · 实时直播</h2>
+      <div class="sub">${escapeHtml(cam.name)} · ${escapeHtml(cam.source || "")}</div>
+    </div>
+    <div class="detail-body">
+      ${frame}
+      ${page ? `<a class="nav-btn" href="${escapeAttr(page)}" target="_blank" rel="noopener noreferrer">↗ 在新窗口打开实时直播 · Open live cam</a>` : ""}
+      <div class="reg-disclaimer">直播由第三方提供，可能偶尔离线 · third-party stream, may be offline at times</div>
+    </div>`;
+  modal.classList.remove("hidden");
+  const close = document.getElementById("camClose");
+  if (close) close.onclick = closeLiveCam;
+  modal.onclick = (e) => { if (e.target === modal) closeLiveCam(); };
+}
+function closeLiveCam() {
+  const modal = document.getElementById("camModal");
+  const content = document.getElementById("camModalContent");
+  if (content) content.innerHTML = "";   // unload the iframe → stop the stream
+  if (modal) modal.classList.add("hidden");
 }
 
 // Nearest tackle shops to a spot (logistics — where to grab bait/gear on the way).

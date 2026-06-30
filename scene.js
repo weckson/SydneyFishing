@@ -118,6 +118,7 @@
         </section>
       </div>`;
     inner().querySelector("#scClose").onclick = close;
+    if (window.bindLiveCam) window.bindLiveCam(spot);
 
     // Live conditions + score + rock safety verdict (async; same engine as showDetail).
     if (window.fetchSpotConditions) {
