@@ -65,7 +65,27 @@ export const COMMUNITY_GLOBAL = [
     title: "Australia fishing guides (RED)", titleCn: "澳洲钓鱼攻略合集（小红书）" },
   { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "小红书", fetch: false,
     url: "https://www.xiaohongshu.com/search_result?keyword=" + enc("钓鱼 新手 装备 钓组"),
-    title: "Beginner gear & rigs (RED)", titleCn: "新手装备/钓组合集（小红书）" }
+    title: "Beginner gear & rigs (RED)", titleCn: "新手装备/钓组合集（小红书）" },
+
+  // —— 名人/教练教程 (named coaches & pro anglers) ——
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "YouTube · Roger Osborne", fetch: false,
+    url: "https://www.youtube.com/@RogerOsborneFishing",
+    title: "Roger Osborne — Sydney beach-fishing coach", titleCn: "Roger Osborne · 悉尼海滩钓鱼教练（YouTube）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "Roger's Fishing", fetch: false,
+    url: "https://www.rogersfishing.com/beach-fishing-masterclass",
+    title: "Beach fishing beginner course", titleCn: "海滩钓鱼新手课程（Roger Osborne）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "哔哩哔哩 bilibili", fetch: false,
+    url: "https://search.bilibili.com/all?keyword=" + enc("马成 路亚 教学"),
+    title: "Ma Cheng (Daiwa pro) — lure tutorials", titleCn: "马成 · Daiwa 签约钓手 路亚教学（B 站）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "抖音 Douyin", fetch: false,
+    url: "https://www.douyin.com/search/" + enc("马成 路亚"),
+    title: "Ma Cheng — lure videos (Douyin, 500k+)", titleCn: "马成 路亚 视频（抖音 · 50万+ 粉）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "小红书", fetch: false,
+    url: "https://www.xiaohongshu.com/search_result?keyword=" + enc("马成 路亚"),
+    title: "Ma Cheng — lure notes (RED)", titleCn: "马成 路亚 笔记（小红书）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "哔哩哔哩 bilibili", fetch: false,
+    url: "https://search.bilibili.com/all?keyword=" + enc("daiwa 签约钓手 路亚 教学"),
+    title: "Daiwa pro-angler lure tutorials", titleCn: "Daiwa 签约钓手 路亚教学（B 站）" }
 ];
 
 // LINK-only per-region + per-species sources — diversified (Chinese RED + Reddit + YouTube how-to).

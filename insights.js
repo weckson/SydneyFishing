@@ -82,7 +82,7 @@
       el.innerHTML = (d.items && d.items.length) ? d.items.map(intelItem).join("") : `<div class="ins-empty">${emptyMsg}</div>`;
     } catch (e) { el.innerHTML = `<div class="ins-empty">加载失败</div>`; }
   }
-  const loadBeginner = () => loadInto("insBeginner", { kind: "tutorial", limit: 6 }, "教程整理中");
+  const loadBeginner = () => loadInto("insBeginner", { kind: "tutorial", scopeKey: "beginner", limit: 10 }, "教程整理中");
   const loadIntel = () => loadInto("insIntel", { limit: 12 }, "暂无动态，更新引擎稍后会抓取");
 
   async function render() {
