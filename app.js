@@ -50,6 +50,8 @@ const DEFAULT_TIDE_BY_TYPE = {
 
 let map, userMarker, userLatLng = null;
 let spotMarkers = [];
+let shopMarkers = [];
+let shopsVisible = false;
 let currentWeather = null;  // { weather, marine, tide, sun }
 let sortedSpots = [];
 let currentMode = "fish";   // default: fish-first
@@ -230,6 +232,7 @@ function initMap() {
   mapCenterLatLng = [c0.lat, c0.lng];
   drawSpotMarkers();
   drawRadiusCircle();
+  addShopsControl();
 
   // Dynamic: on move (live) keep circle centered; on moveend update scoring.
   map.on("move", () => {
@@ -324,6 +327,43 @@ function drawSpotMarkers(bestId = null, topIds = new Set()) {
     });
     spotMarkers.push(marker);
   });
+}
+
+// ---------- Tackle shops layer (toggleable; 本地渔具店) ----------
+function shopIcon() {
+  const html = `<div style="background:#7c3aed;border:2px solid #fff;width:14px;height:14px;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.4)"></div>`;
+  return L.divIcon({ html, className: "", iconSize: [14, 14], iconAnchor: [7, 7] });
+}
+function drawShopMarkers() {
+  shopMarkers.forEach(m => map.removeLayer(m));
+  shopMarkers = [];
+  if (!shopsVisible) return;
+  (window.SF_SHOPS || []).forEach(sh => {
+    const url = safeUrl(sh.url);
+    const link = url ? `<br><a href="${escapeAttr(url)}" target="_blank" rel="noopener noreferrer">📍 地图/导航 Map →</a>` : "";
+    const m = L.marker([sh.lat, sh.lng], { icon: shopIcon() }).addTo(map)
+      .bindPopup(`<b>${escapeHtml(sh.nameCn || sh.name)}</b><br><span style="color:#6b8299;font-size:11px">${escapeHtml(sh.name)} · ${escapeHtml(sh.suburb || "")}</span>${link}`);
+    shopMarkers.push(m);
+  });
+}
+function toggleShops() {
+  shopsVisible = !shopsVisible;
+  drawShopMarkers();
+  const btn = document.getElementById("shopsToggle");
+  if (btn) btn.classList.toggle("active", shopsVisible);
+}
+// Custom Leaflet control: a toggle to show/hide the tackle-shop layer.
+function addShopsControl() {
+  if (!map || !L.control) return;
+  const ctl = L.control({ position: "topleft" });
+  ctl.onAdd = function () {
+    const d = L.DomUtil.create("div", "leaflet-bar shops-ctl");
+    d.innerHTML = `<button id="shopsToggle" type="button" title="显示/隐藏渔具店 · Tackle shops">${svgIcon("anchor")}<span>渔具店</span></button>`;
+    L.DomEvent.disableClickPropagation(d);
+    d.querySelector("button").addEventListener("click", toggleShops);
+    return d;
+  };
+  ctl.addTo(map);
 }
 
 const FORECAST_PARAMS = "current=temperature_2m,wind_speed_10m,wind_direction_10m,precipitation,weather_code&daily=sunrise,sunset&hourly=pressure_msl&past_days=1&forecast_days=2&timezone=Australia%2FSydney&timeformat=unixtime";

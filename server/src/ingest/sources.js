@@ -52,7 +52,20 @@ export const COMMUNITY_GLOBAL = [
     title: "Beginner fishing knots", titleCn: "新手必学钓鱼绳结（YouTube）" },
   { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "哔哩哔哩 bilibili", fetch: false,
     url: "https://search.bilibili.com/all?keyword=" + enc("悉尼 钓鱼 新手 教程"),
-    title: "Sydney fishing tutorials (Chinese)", titleCn: "悉尼钓鱼新手教程（B 站中文）" }
+    title: "Sydney fishing tutorials (Chinese)", titleCn: "悉尼钓鱼新手教程（B 站中文）" },
+  // 中文「合集/精选」入口 —— 以后可替换成你们自营账号/固定合集的 URL。
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "哔哩哔哩 bilibili", fetch: false,
+    url: "https://search.bilibili.com/all?keyword=" + enc("路亚 入门 合集"),
+    title: "Lure fishing basics (bilibili)", titleCn: "路亚入门合集（B 站）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "哔哩哔哩 bilibili", fetch: false,
+    url: "https://search.bilibili.com/all?keyword=" + enc("海钓 矶钓 教学 合集"),
+    title: "Rock/sea fishing how-to (bilibili)", titleCn: "海钓/矶钓教学合集（B 站）" },
+  { kind: "report", scopeType: "global", scopeKey: "", name: "小红书", fetch: false,
+    url: "https://www.xiaohongshu.com/search_result?keyword=" + enc("澳洲 钓鱼 攻略"),
+    title: "Australia fishing guides (RED)", titleCn: "澳洲钓鱼攻略合集（小红书）" },
+  { kind: "tutorial", scopeType: "global", scopeKey: "beginner", name: "小红书", fetch: false,
+    url: "https://www.xiaohongshu.com/search_result?keyword=" + enc("钓鱼 新手 装备 钓组"),
+    title: "Beginner gear & rigs (RED)", titleCn: "新手装备/钓组合集（小红书）" }
 ];
 
 // LINK-only per-region + per-species sources — diversified (Chinese RED + Reddit + YouTube how-to).
