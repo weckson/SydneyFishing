@@ -13,7 +13,7 @@ const SYDNEY_CENTER = [-33.8688, 151.2093];
 const COMPASS = ["N","NNE","NE","ENE","E","ESE","SE","SSE","S","SSW","SW","WSW","W","WNW","NW","NNW"];
 // Scoring engine version. Stamped into every catch_report's conditions_snapshot so that, as
 // the multipliers evolve, past snapshots stay comparable within their own version cohort.
-const ENGINE_VERSION = "1.4";
+const ENGINE_VERSION = "1.5";
 
 // ---------- Scoring Modes ----------
 // Each mode adjusts how much each factor influences the final score.
@@ -61,12 +61,45 @@ let sheetState = "collapsed"; // "collapsed" | "half" | "full" — mobile bottom
 
 function lerp(a, b, t) { return a + (b - a) * Math.max(0, Math.min(1, t)); }
 
-// Normalize the raw multiplicative score to a 0-100 display scale.
-// Realistic ceiling: 94 (base) × ~1.35 (weather+pressure) × 1.22 (tide) × 1.15 (time)
-// × 1.05 (moon) × ~1.15 (season) × 1.05 (access) ≈ 200. Theoretical max is higher but clamps.
-function toDisplayScore(rawScore) {
-  const normalized = rawScore / 2.0;
-  return Math.max(0, Math.min(100, Math.round(normalized)));
+// ---- Display normalization (v1.4.1: reputation anchor + conditions swing) ----
+// The raw multiplicative score is upward-inflated by asymmetric factor floors (weather ≥1.15,
+// tide +18%/−10%, moon flat 1.05), so the old "raw ÷ 2" both inflated neutral days AND
+// compressed the top — everything crammed into ~32–88. Instead we map a spot's REPUTATION
+// (baseScore 62..94) onto a neutral-day band, then let the live multiplier product swing it
+// toward 100 (great day) or 0 (storm). All six knobs are named constants — retune freely.
+const DISPLAY_NEUTRAL_BASE_LO = 62;   // empirical baseScore floor (measured min)
+const DISPLAY_NEUTRAL_BASE_HI = 94;   // empirical baseScore ceiling (measured max)
+const DISPLAY_NEUTRAL_LO      = 55;   // a 62-rep spot reads ~55 on a neutral day
+const DISPLAY_NEUTRAL_HI      = 84;   // a 94-rep spot reads ~84 on a neutral day
+const DISPLAY_NEUTRAL_PRODUCT = 1.20; // "average day" multiplier baseline (weather-floor 1.15 × moon 1.05);
+                                      // a spot at this product reads ≈ its reputation band
+const DISPLAY_SWING_GAIN      = 0.9;  // log2 sensitivity: how hard conditions move the score
+const DISPLAY_MAX_DOWN        = 0.92; // worst-day floor keeps ~8% of neutral (no dead 0)
+
+// Map reputation + live multiplier product onto the full 0-100 scale. Neutral day
+// (product ≈ DISPLAY_NEUTRAL_PRODUCT) reads ≈ the spot's reputation band; great day → ~100;
+// storm → near 0.
+// NOTE: this is NOT a pure function of the raw condScore — two spots with the same condScore
+// but different baseScore display differently. Ranking is unaffected because every sort/compare
+// uses `.score` (= condScore × distancePenalty); `.displayScore` is render-only.
+// ⚠️ DO NOT sort or compare on `.displayScore` or you will reorder the board.
+function displayScoreFor(baseScore, product) {
+  const t = Math.max(0, Math.min(1,
+    (baseScore - DISPLAY_NEUTRAL_BASE_LO) / (DISPLAY_NEUTRAL_BASE_HI - DISPLAY_NEUTRAL_BASE_LO)));
+  const neutral = DISPLAY_NEUTRAL_LO + (DISPLAY_NEUTRAL_HI - DISPLAY_NEUTRAL_LO) * t;
+  let s = DISPLAY_SWING_GAIN * Math.log(product / DISPLAY_NEUTRAL_PRODUCT) / Math.LN2; // log2 ratio
+  s = Math.max(-DISPLAY_MAX_DOWN, Math.min(1, s));
+  const score = s >= 0 ? neutral + s * (100 - neutral) : neutral * (1 + s);
+  return Math.max(0, Math.min(100, Math.round(score)));
+}
+
+// scoreSpot now returns an ALREADY-finished 0-100 displayScore, so render call sites use it
+// directly. toDisplayScore is kept ONLY as a safe clamp+round for the one external caller
+// (scene.js, via window.toDisplayScore) which passes a finished displayScore. It is a pure
+// clamp — NOT the old "halve raw" shim — so it can never silently mis-scale a value.
+function toDisplayScore(value) {
+  if (value == null) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
 }
 
 // ---------- Time & timezone helpers ----------
@@ -132,17 +165,22 @@ function seasonFactorFor(spot, nowMs = Date.now()) {
     return { mult: 1.0, reason: null, inSeason: [], offSeason: [] };
   }
   const month = sydneyParts(nowMs).month - 1;
-  const weights = window.SEASON_SPECIES_WEIGHTS || [0.45, 0.25, 0.15, 0.10, 0.05];
+  // Strength-weighting (v1.5): weight each species by how IN-SEASON it is this month, NOT by its
+  // position in spot.species. The old order-weighting assumed species were listed by importance —
+  // they aren't (33% of spots' species[0] disagreed with their prose lead species), so winter
+  // spots were dragged down by a summer species that happened to be listed first. Now whatever is
+  // genuinely biting this month dominates, regardless of list order. Species missing from the
+  // table are SKIPPED (not counted as a neutral 1.0) so data gaps don't silently anchor the score.
+  const SEASON_STRENGTH_FLOOR = 0.5; // clamp before squaring so off-season species still count a little
   let acc = 0, wSum = 0;
   const inSeason = [], offSeason = [];
-  spot.species.forEach((sp, i) => {
-    const m = table[sp] ? table[sp][month] : 1.0;
-    const w = weights[Math.min(i, weights.length - 1)];
+  spot.species.forEach((sp) => {
+    if (!table[sp]) { if (window.SF_DEBUG) console.warn("season: no table for", sp); return; }
+    const m = table[sp][month];
+    const w = Math.pow(Math.max(m, SEASON_STRENGTH_FLOOR), 2); // in-season species weigh most
     acc += m * w; wSum += w;
-    if (table[sp]) {
-      if (m >= 1.1) inSeason.push(sp);
-      else if (m <= 0.75) offSeason.push(sp);
-    }
+    if (m >= 1.1) inSeason.push(sp);
+    else if (m <= 0.75) offSeason.push(sp);
   });
   const mult = wSum > 0 ? acc / wSum : 1.0;
   const pct = ((mult - 1) * 100).toFixed(0);
@@ -702,6 +740,8 @@ function scoreSpot(spot, refLoc, cond, mode) {
 
   // 钓况分 (displayed): purely "how good is fishing at this spot right now".
   const condScore = spot.baseScore * weatherMult * tideMult * timeMult * moonMult * season.mult * accessMult;
+  const product = condScore / spot.baseScore;                 // the multiplier product (centred ~1.0)
+  const display = displayScoreFor(spot.baseScore, product);   // finished 0-100, computed HERE
 
   // Frozen, immutable record of EXACTLY how this score was produced + the raw inputs behind
   // it. Persisted with every catch report so real outcomes can later calibrate the weights.
@@ -710,7 +750,7 @@ function scoreSpot(spot, refLoc, cond, mode) {
     scoringMode: mode,
     baseScore: spot.baseScore,
     rawScore: condScore,
-    displayScore: toDisplayScore(condScore),
+    displayScore: display,
     factors: {
       weather: round3(weatherMult), tide: round3(tideMult), time: round3(timeMult),
       moon: round3(moonMult), season: round3(season.mult), access: round3(accessMult)
@@ -737,7 +777,7 @@ function scoreSpot(spot, refLoc, cond, mode) {
 
   return {
     score: condScore * distancePenalty,  // ranking only
-    displayScore: condScore,             // what the user sees
+    displayScore: display,               // finished 0-100 int (was raw condScore)
     dist, reasons,
     inSeason: season.inSeason,
     snapshot
@@ -912,7 +952,9 @@ function renderSafetyVerdict(spot, verdict) {
   if (!verdict) return "";
   const sc = window.SAFETY_CONTENT || {};
   const meta = window.NSW_REGULATIONS_META || {};
-  const reminders = (sc.rockReminders || []).map(r =>
+  // Show only the 2 most critical reminders inline to keep the banner compact; the full
+  // 5-step checklist lives one tap away in the "新手安全教程" tutorial modal below.
+  const reminders = (sc.rockReminders || []).slice(0, 2).map(r =>
     `<li>${escapeHtml(r.cn)} · <span class="en">${escapeHtml(r.en)}</span></li>`).join("");
   const reasons = verdict.reasonsCn.length
     ? `<div class="sv-reasons">${escapeHtml(verdict.reasonsCn.join(" · "))}</div>` : "";
@@ -1048,10 +1090,20 @@ function render() {
   const radius = parseFloat(document.getElementById("radiusSel").value);
   const speciesFilter = document.getElementById("speciesSel").value;
   const accessFilter = parseInt(document.getElementById("accessSel").value, 10) || 0;
+  const searchEl = document.getElementById("spotSearch");
+  const searchTerm = (searchEl ? searchEl.value : "").trim().toLowerCase();
   const listEl = document.getElementById("spotList");
   const refLoc = referencePoint();
 
   let spots = window.SYDNEY_SPOTS.slice();
+  // Name search (zh + en + suburb): matches anywhere in the name; bypasses the radius gate below
+  // so a searched spot always surfaces even if it's far from the map center.
+  if (searchTerm) {
+    spots = spots.filter(s =>
+      (s.nameCn && s.nameCn.toLowerCase().includes(searchTerm)) ||
+      (s.name && s.name.toLowerCase().includes(searchTerm)) ||
+      (s.area && s.area.toLowerCase().includes(searchTerm)));
+  }
   if (speciesFilter) spots = spots.filter(s => s.species.includes(speciesFilter));
   if (accessFilter) {
     spots = spots.filter(s => {
@@ -1077,12 +1129,16 @@ function render() {
 
   sortedSpots = scored;
 
-  const visible = scored.filter(s => s.dist <= radius);
+  // While searching by name, show every match regardless of distance; otherwise gate by radius.
+  const visible = searchTerm ? scored : scored.filter(s => s.dist <= radius);
   const toShow = visible.length ? visible : scored.slice(0, 6);
 
   listEl.innerHTML = "";
   if (!toShow.length) {
-    listEl.innerHTML = `<div class="empty-state"><svg class="empty-fish" aria-hidden="true"><use href="#ic-fish"></use></svg>该条件下暂无匹配的钓点<br><small>试试放大半径或更换鱼种</small></div>`;
+    const emptyMsg = searchTerm
+      ? `没有匹配「${escapeHtml(searchTerm)}」的钓点<br><small>换个关键词试试</small>`
+      : `该条件下暂无匹配的钓点<br><small>试试放大半径或更换鱼种</small>`;
+    listEl.innerHTML = `<div class="empty-state"><svg class="empty-fish" aria-hidden="true"><use href="#ic-fish"></use></svg>${emptyMsg}</div>`;
     return;
   }
   // Distance label semantics: "离我" only when the reference point IS the user.
@@ -1156,6 +1212,13 @@ function showDetail(id) {
   const s = entry.spot;
   const inSeason = entry.inSeason || [];
   const el = document.getElementById("detailContent");
+  // Seed the Live Conditions panel with this spot's ALREADY-LOADED regional data so weather/
+  // tide show instantly (no "loading…" wait). The per-spot fetch below then refines it to the
+  // exact coordinate. Same data shape (both go through parseForecastEntry), so it just works.
+  const seedRegional = conditionsForSpot(s);
+  const seedCond = (seedRegional && seedRegional.weather)
+    ? { ...seedRegional, fetchedAt: regionFetchedAt || Date.now(), _seed: true }
+    : null;
   el.innerHTML = `
     <div class="detail-hero">
       <button class="close" id="closeDetail">×</button>
@@ -1182,9 +1245,7 @@ function showDetail(id) {
 
       <section>
         <h4>当前海况 · Live Conditions</h4>
-        <div class="spot-conditions" id="spotConditions">
-          <div class="spot-conditions-loading">海况加载中… · Loading conditions at ${escapeHtml(s.nameCn)}</div>
-        </div>
+        <div class="spot-conditions" id="spotConditions">${renderSpotConditionsHTML(seedCond)}</div>
       </section>
 
       <section>
@@ -1199,8 +1260,6 @@ function showDetail(id) {
       </section>
 
       ${renderRigsSection(s)}
-
-      ${renderRegulationsSection(s)}
 
       <section>
         <h4>现场提示 · Local Tips</h4>
@@ -1231,6 +1290,8 @@ function showDetail(id) {
         <h4>钓友评论 · Reviews</h4>
         ${renderReviewsSection(s.id)}
       </section>
+
+      ${renderRegulationsSection(s)}
     </div>
   `;
   // re-bind close button (it's now inside dynamic content)
@@ -1265,6 +1326,9 @@ function showDetail(id) {
   // exactly match the Live Conditions panel (they used to come from different data).
   // Kicked off BEFORE flyTo so a map hiccup can never block the data refresh.
   fetchSpotConditions(s).then(data => {
+    // Race guard: if the user has since opened a DIFFERENT spot, this resolved fetch belongs to
+    // an old detail view — drop it so it can't clobber the spot now on screen.
+    if (currentDetail.spotId !== s.id) return;
     const box = document.getElementById("spotConditions");
     if (box) box.innerHTML = renderSpotConditionsHTML(data);
     const refined = scoreSpot(s, referencePoint(), data, currentMode);
@@ -1280,10 +1344,15 @@ function showDetail(id) {
     const sv = document.getElementById("safetyVerdict");
     if (sv) { sv.innerHTML = renderSafetyVerdict(s, safetyVerdict(s, refined.snapshot)); bindSafetyVerdict(); }
     // Catch reports logged from now on freeze THIS refined (per-spot) snapshot.
-    if (currentDetail.spotId === s.id) currentDetail.snapshot = refined.snapshot;
+    currentDetail.snapshot = refined.snapshot;
   }).catch(err => {
-    const box = document.getElementById("spotConditions");
-    if (box) box.innerHTML = `<div class="spot-conditions-loading">海况数据暂不可用 · Conditions unavailable</div>`;
+    if (currentDetail.spotId !== s.id) return;
+    // Per-spot refine failed. If we had seeded regional data, keep it on screen (don't blank it).
+    // Only when there was no seed at all do we show the unavailable message.
+    if (!seedCond) {
+      const box = document.getElementById("spotConditions");
+      if (box) box.innerHTML = `<div class="spot-conditions-loading">海况数据暂不可用 · Conditions unavailable</div>`;
+    }
     console.warn("spot conditions fetch failed", err);
   });
 
@@ -1534,7 +1603,9 @@ function renderSpotConditionsHTML(data) {
       ${tideText ? `<div class="wide"><span>${svgIcon('tide')} 潮汐</span><b>${tideText}</b></div>` : ""}
     </div>
     ${primeBlock}
-    <div class="spot-cond-footnote">数据时间 ${formatTime(new Date(data.fetchedAt))} · 基于钓点坐标实时计算 · 潮汐时间已按悉尼官方潮表校准</div>
+    <div class="spot-cond-footnote">${data._seed
+      ? `区域实时数据 · 正在按本点坐标精算…`
+      : `数据时间 ${formatTime(new Date(data.fetchedAt))} · 基于钓点坐标实时计算 · 潮汐时间已按悉尼官方潮表校准`}</div>
   `;
 }
 
@@ -2240,6 +2311,23 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   document.getElementById("speciesSel").addEventListener("change", render);
   document.getElementById("accessSel").addEventListener("change", render);
+  // Spot name search — live filter as you type; the × button clears it.
+  const spotSearchEl = document.getElementById("spotSearch");
+  const spotSearchClear = document.getElementById("spotSearchClear");
+  if (spotSearchEl) {
+    spotSearchEl.addEventListener("input", () => {
+      if (spotSearchClear) spotSearchClear.hidden = !spotSearchEl.value;
+      render();
+    });
+  }
+  if (spotSearchClear) {
+    spotSearchClear.addEventListener("click", () => {
+      spotSearchEl.value = "";
+      spotSearchClear.hidden = true;
+      spotSearchEl.focus();
+      render();
+    });
+  }
   // Mode selector
   document.querySelectorAll(".mode-btn").forEach(btn => {
     btn.addEventListener("click", () => {

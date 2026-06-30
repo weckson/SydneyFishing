@@ -254,6 +254,11 @@
         </label>
       </div>
     </div>
+    <div class="spot-search-wrap">
+      <svg class="ic spot-search-icon" aria-hidden="true"><use href="#ic-pin"></use></svg>
+      <input type="search" id="spotSearch" class="spot-search" placeholder="搜索钓点名称 · Search spots" autocomplete="off" aria-label="搜索钓点" />
+      <button type="button" id="spotSearchClear" class="spot-search-clear" aria-label="清除" hidden>×</button>
+    </div>
     <div id="status" class="status">点击右上「📍 定位我」获取附近最佳钓点 · Tap Locate to begin</div>
     <div id="spotList" class="spot-list"></div>
   </section>
@@ -364,18 +369,18 @@
   <div class="detail-card">
     <div class="detail-hero">
       <button class="close" id="closeAlgo">×</button>
-      <h2>智能打分算法 v1.4</h2>
+      <h2>智能打分算法 v1.5</h2>
       <div class="sub">How the Score is calculated · 三种模式 / 八个因子 / 分区域实时数据</div>
     </div>
     <div class="detail-body">
       <section>
         <h4>核心公式 · Formula</h4>
         <div class="formula">
-          钓况分 = 基础声誉 × 海况 × 潮汐 × 时段<br>
-          × 月相 × 季节 × 交通
+          钓况分 = f( 基础声誉 ，海况 × 潮汐 × 时段 × 月相 × 季节 × 交通 )<br>
+          <span style="font-size:12px;opacity:.8">基础声誉定"中性日基准分"，各因子相乘的"海况倍数"再把分数推向 0 或 100</span>
         </div>
-        <p>显示的 0–100 分就是上面的<b>钓况分</b>——它只回答"这个点现在好不好钓"。<b>距离不改变分数</b>，只在"就近/家庭"模式下影响排序先后。</p>
-        <p class="en">Displayed score = baseScore × weather × tide × time × moon × season × access. Distance affects ranking only, never the number.</p>
+        <p>显示的 0–100 分是<b>钓况分</b>：先由钓点的<b>基础声誉</b>确定它在"平常日子"的基准分（约 55–84），再由当前<b>海况倍数</b>（海况×潮汐×时段×月相×季节×交通）把分数往上推向 100（条件极佳）或往下压向接近 0（风暴/不当季）。<b>距离不改变分数</b>，只在"就近/家庭"模式下影响排序先后。</p>
+        <p class="en">Displayed 0–100 score: reputation sets a neutral-day baseline (~55–84), then the live conditions multiplier (weather × tide × time × moon × season × access) swings it up toward 100 or down toward 0. Distance affects ranking only, never the number.</p>
       </section>
 
       <section>
@@ -429,7 +434,7 @@
 
       <section>
         <h4>⑥ 季节因子 · Season (v1.4 新)</h4>
-        <p>12 个目标鱼种各有 12 个月的活跃度曲线（依据悉尼本地船宿/钓鱼媒体的季节日历）：夏季 Kingfish/Whiting/Flathead 当季，冬季 Drummer/Luderick/Salmon/Trevally 当季。钓点按其目标鱼加权（第一目标鱼权重最高），当季鱼种在卡片上以 🔥 标出。冬天不会再把纯夏季点排第一。</p>
+        <p>15 个目标鱼种各有 12 个月的活跃度曲线（依据悉尼本地船宿/钓鱼媒体的季节日历）：夏季 Kingfish/Whiting/Flathead 当季，冬季 Drummer/Luderick/Salmon/Trevally 当季。钓点按<b>“当季强度”</b>加权——当月最当季的鱼种权重最大，与它在鱼种列表中的排列顺序无关；当季鱼种在卡片上以 🔥 标出。冬天不会再把纯夏季点排第一。</p>
       </section>
 
       <section>

@@ -29,7 +29,13 @@ window.SPECIES_SEASONS = {
   // Luderick: year-round but winter spawning run is prime time.
   Luderick:  [0.85,  0.85,  0.90,  1.00,  1.15,  1.20,  1.20,  1.15,  1.05,  0.95,  0.90,  0.85],
   // Blue groper: year-round when seas allow; winter often calmest windows + crab baits.
-  Groper:    [0.95,  0.95,  0.95,  1.00,  1.05,  1.10,  1.10,  1.10,  1.05,  1.00,  0.95,  0.95]
+  Groper:    [0.95,  0.95,  0.95,  1.00,  1.05,  1.10,  1.10,  1.10,  1.05,  1.00,  0.95,  0.95],
+  // Bonito: warm-month pelagic off Sydney headlands; summer–autumn peak, gone in winter.
+  Bonito:    [1.15,  1.15,  1.15,  1.05,  0.85,  0.65,  0.60,  0.65,  0.80,  0.95,  1.05,  1.15],
+  // Yellowtail (jack mackerel): year-round bait/light tackle, mild summer lean.
+  Yellowtail:[1.05,  1.05,  1.05,  1.00,  1.00,  0.95,  0.95,  0.95,  1.00,  1.00,  1.05,  1.05],
+  // Snapper: year-round inshore reef; cooler-month (winter) inshore peak.
+  Snapper:   [0.95,  0.95,  1.00,  1.05,  1.10,  1.15,  1.15,  1.10,  1.05,  1.00,  0.95,  0.95]
 };
 
 // Weight of each species position in a spot's species list (primary target weighs most).
