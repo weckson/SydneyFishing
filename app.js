@@ -2072,13 +2072,19 @@ function renderCamsSection(spot) {
       <span class="cam-src">${escapeHtml(c.source)} ↗</span>
     </a>`).join("");
   const live = window.liveCamForSpot ? window.liveCamForSpot(spot) : null;
-  const liveBtn = live
-    ? `<button type="button" class="livecam-btn" id="liveCamBtn">▶ 看实时直播 · ${escapeHtml(live.nameCn)} Live${live.embed ? "" : " ↗"}</button>`
-    : "";
+  let liveBlock = "";
+  if (live && live.embed) {
+    // Auto-show the live cam inline the moment the spot opens (small player); 放大 → full modal.
+    liveBlock = `
+      <div class="cam-inline"><iframe src="${escapeAttr(live.embed)}" allow="autoplay; fullscreen" referrerpolicy="no-referrer" title="${escapeAttr(live.nameCn)}" loading="lazy"></iframe></div>
+      <div class="cam-inline-cap">📹 ${escapeHtml(live.nameCn)} 实时直播 · <button type="button" class="cam-expand" id="liveCamBtn">放大/全屏 Expand</button></div>`;
+  } else if (live) {
+    liveBlock = `<button type="button" class="livecam-btn" id="liveCamBtn">▶ 看实时直播 · ${escapeHtml(live.nameCn)} Live ↗</button>`;
+  }
   return `
     <section>
       <h4>📹 实时浪况 · Live Cams &amp; Wave Data</h4>
-      ${liveBtn}
+      ${liveBlock}
       <div class="cam-list">${rows}</div>
       <div class="reg-disclaimer">外部链接，新窗口打开 · External links open in a new tab</div>
     </section>`;

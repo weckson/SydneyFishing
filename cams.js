@@ -16,10 +16,11 @@
     // Live cams (kind:'cam'). embed=YouTube → plays in-app; embed=null → opens the cam page.
     { region: "harbour", kind: "cam", source: "WebcamSydney", nameCn: "悉尼港 实时直播", name: "Sydney Harbour live", lat: -33.8450, lng: 151.2100,
       url: "https://webcamsydney.com/", embed: null },
-    { region: "harbour", kind: "cam", source: "Swellnet", nameCn: "Bondi 邦迪", name: "Bondi", lat: -33.8915, lng: 151.2767, url: "https://www.swellnet.com/surfcams/bondi", embed: null },
-    { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Manly 曼利", name: "Manly", lat: -33.7969, lng: 151.2876, url: "https://www.swellnet.com/surfcams/manly", embed: null },
+    // Windy cams are embeddable INLINE (Windy provides the public embed player). Others link out.
+    { region: "harbour", kind: "cam", source: "Windy", nameCn: "Bondi 邦迪", name: "Bondi (North Bondi)", lat: -33.8915, lng: 151.2767, url: "https://www.windy.com/webcams/1721795690", embed: "https://webcams.windy.com/webcams/public/embed/player/1721795690/live" },
+    { region: "northern-beaches", kind: "cam", source: "Windy", nameCn: "Manly 曼利", name: "Manly", lat: -33.7969, lng: 151.2876, url: "https://www.windy.com/webcams/1234365712", embed: "https://webcams.windy.com/webcams/public/embed/player/1234365712/live" },
     { region: "northern-beaches", kind: "cam", source: "Swellnet", nameCn: "Narrabeen 纳拉滨", name: "Narrabeen", lat: -33.7126, lng: 151.2986, url: "https://www.swellnet.com/surfcams/narrabeen", embed: null },
-    { region: "south", kind: "cam", source: "Swellnet", nameCn: "Maroubra 马鲁布拉", name: "Maroubra", lat: -33.9497, lng: 151.2575, url: "https://www.swellnet.com/surfcams/maroubra", embed: null },
+    { region: "south", kind: "cam", source: "Windy", nameCn: "Maroubra 马鲁布拉", name: "Maroubra", lat: -33.9497, lng: 151.2575, url: "https://www.windy.com/webcams/1580184425", embed: "https://webcams.windy.com/webcams/public/embed/player/1580184425/live" },
     { region: "south", kind: "cam", source: "Swellnet", nameCn: "Cronulla 克罗努拉", name: "Cronulla", lat: -34.0577, lng: 151.1518, url: "https://www.swellnet.com/surfcams/cronulla", embed: null },
     // Wollongong region gets its own official buoy (Port Kembla).
     { region: "wollongong", kind: "data", source: "MHL NSW", nameCn: "Port Kembla 实时浪高", name: "Port Kembla wave buoy — live Hs", url: "https://mhl.nsw.gov.au/Station-PORKEM" }
